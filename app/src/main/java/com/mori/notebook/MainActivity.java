@@ -21,6 +21,10 @@ public class MainActivity extends BaseActivity {
     private NoteAdapter adapter;
     private RecyclerView recycler;
     private TextView emptyView;
+    /** 下拉进入隐私笔记 */
+    private float pullDownY;
+    private boolean pullFromTop;
+    private static final int PULL_THRESHOLD_DP = 72;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,6 +63,8 @@ public class MainActivity extends BaseActivity {
         });
         recycler.setAdapter(adapter);
         applyLayoutMode();
+        attachPull(findViewById(R.id.recycler));
+        attachPull(findViewById(R.id.root));
 
         FloatingActionButton fab = findViewById(R.id.fab);
         fab.setOnClickListener(v -> new MaterialAlertDialogBuilder(this)
@@ -73,6 +79,31 @@ public class MainActivity extends BaseActivity {
                 .show());
     }
 
+    /** 在主列表顶部向下拖超过阈值 → 进入隐私笔记 */
+    private void attachPull(View v) {
+        if (v == null) return;
+        final int threshold = (int) (PULL_THRESHOLD_DP * getResources().getDisplayMetrics().density);
+        v.setOnTouchListener((view, e) -> {
+            switch (e.getActionMasked()) {
+                case android.view.MotionEvent.ACTION_DOWN:
+                    pullDownY = e.getY();
+                    pullFromTop = !recycler.canScrollVertically(-1);
+                    break;
+                case android.view.MotionEvent.ACTION_UP:
+                    if (pullFromTop && e.getY() - pullDownY > threshold) {
+                        pullFromTop = false;
+                        startActivity(new Intent(this, PrivateNotesActivity.class));
+                    }
+                    break;
+                case android.view.MotionEvent.ACTION_CANCEL:
+                    pullFromTop = false;
+                    break;
+                default:
+                    break;
+            }
+            return false;
+        });
+    }
     private void toggleGrid() {
         boolean grid = !UiPrefs.isGridMode(this);
         UiPrefs.setGridMode(this, grid);
@@ -97,7 +128,7 @@ public class MainActivity extends BaseActivity {
     private void showItemMenu(Note note) {
         new MaterialAlertDialogBuilder(this)
                 .setTitle(note.title == null || note.title.trim().isEmpty() ? "无标题" : note.title)
-                .setItems(new String[]{"重命名", "分享图片", "删除"}, (d, which) -> {
+                .setItems(new String[]{"重命名", "设为隐私笔记", "分享图片", "删除"}, (d, which) -> {
                     if (which == 0) {
                         android.widget.EditText et = new android.widget.EditText(this);
                         et.setText(note.title);
@@ -115,6 +146,10 @@ public class MainActivity extends BaseActivity {
                                 .setNegativeButton("取消", null)
                                 .show();
                     } else if (which == 1) {
+                        store.setPrivate(note.id, true);
+                        reload();
+                        Toast.makeText(this, "已设为隐私笔记，主页下拉可进入", Toast.LENGTH_LONG).show();
+                    } else if (which == 2) {
                         ShareUtils.shareAsImage(this, note);
                     } else {
                         new MaterialAlertDialogBuilder(this)

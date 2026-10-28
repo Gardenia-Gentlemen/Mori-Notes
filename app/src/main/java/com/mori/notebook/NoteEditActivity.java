@@ -44,25 +44,6 @@ public class NoteEditActivity extends BaseActivity {
             finish();
             return;
         }
-        exportLauncher = registerForActivityResult(
-                new ActivityResultContracts.StartActivityForResult(), result -> {
-                    if (result.getResultCode() != Activity.RESULT_OK || result.getData() == null) return;
-                    Uri uri = result.getData().getData();
-                    if (uri == null) return;
-                    try {
-                        if (pendingBitmap != null) {
-                            ExportUtils.writeBitmap(this, uri, pendingBitmap);
-                        } else {
-                            ExportUtils.writeText(this, uri, pendingText == null ? "" : pendingText);
-                        }
-                        Toast.makeText(this, "已导出", Toast.LENGTH_SHORT).show();
-                    } catch (Exception e) {
-                        Toast.makeText(this, "导出失败：" + e.getMessage(), Toast.LENGTH_SHORT).show();
-                    } finally {
-                        pendingBitmap = null;
-                        pendingText = null;
-                    }
-                });
         imagePicker = registerForActivityResult(
                 new ActivityResultContracts.GetContent(), uri -> {
                     if (uri != null) insertImage(uri);
@@ -141,21 +122,21 @@ public class NoteEditActivity extends BaseActivity {
     }
 
     private void exportTxt(boolean keepMarkdown) {
-        pendingBitmap = null;
         String src = et.getText().toString();
-        pendingText = keepMarkdown ? src : MarkdownRenderer.toPlainText(src);
+        String text = keepMarkdown ? src : MarkdownRenderer.toPlainText(src);
         try {
-            exportLauncher.launch(ExportUtils.textIntent(defaultName()));
+            String path = ExportUtils.saveText(this, defaultName(), text);
+            Toast.makeText(this, "已导出到 " + path, Toast.LENGTH_LONG).show();
         } catch (Exception e) {
-            Toast.makeText(this, "无法打开文件选择器", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "导出失败：" + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
 
     private void exportImage() {
         try {
-            pendingText = null;
-            pendingBitmap = ExportUtils.renderMarkdown(this, et.getText().toString(), 1080);
-            exportLauncher.launch(ExportUtils.imageIntent(defaultName()));
+            Bitmap bmp = ExportUtils.renderMarkdown(this, et.getText().toString(), 1080);
+            String path = ExportUtils.saveBitmap(this, defaultName(), bmp);
+            Toast.makeText(this, "已导出到 " + path, Toast.LENGTH_LONG).show();
         } catch (Exception e) {
             Toast.makeText(this, "生成图片失败：" + e.getMessage(), Toast.LENGTH_SHORT).show();
         }

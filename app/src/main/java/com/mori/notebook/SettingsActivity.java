@@ -18,6 +18,8 @@ import com.google.android.material.slider.Slider;
 public class SettingsActivity extends BaseActivity {
     private TextView tvLocation;
     private TextView tvBgName;
+    private TextView tvPrivacyState;
+    private ActivityResultLauncher<Intent> deviceLauncher;
     private ActivityResultLauncher<Uri> folderPicker;
 
     @Override
@@ -90,6 +92,18 @@ public class SettingsActivity extends BaseActivity {
             }
         });
 
+        tvPrivacyState = findViewById(R.id.tv_privacy_state);
+        updatePrivacyState();
+        deviceLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(), result -> {
+                    if (result.getResultCode() == RESULT_OK) {
+                        chooseNewPasswordMode();
+                    } else {
+                        toast("未通过验证，无法重置");
+                    }
+                });
+        MaterialButton btnResetPrivacy = findViewById(R.id.btn_reset_privacy);
+        btnResetPrivacy.setOnClickListener(v -> startResetPassword());
         MaterialButton reset = findViewById(R.id.btn_reset_folder);
         reset.setOnClickListener(v -> {
             NoteStore store = NoteStore.get(this);
@@ -103,6 +117,127 @@ public class SettingsActivity extends BaseActivity {
     protected void onResume() {
         super.onResume();
         updateBgName();
+        updatePrivacyState();
+    }
+
+    private void updatePrivacyState() {
+        if (tvPrivacyState == null) return;
+        String mode;
+        if (!PrivacyPrefs.isConfigured(this)) {
+            mode = "未设置";
+        } else if (PrivacyPrefs.isDeviceMode(this)) {
+            mode = "手机锁屏密码";
+        } else {
+            mode = "数字密码";
+        }
+        tvPrivacyState.setText("当前方式：" + mode);
+    }
+
+    /** 重置密码：先验证旧密码或手机锁屏密码 */
+    private void startResetPassword() {
+        if (!PrivacyPrefs.isConfigured(this)) {
+            chooseNewPasswordMode();
+            return;
+        }
+        if (PrivacyPrefs.isDeviceMode(this)) {
+            Intent i = PrivacyPrefs.deviceCredentialIntent(this, "验证身份", "验证手机锁屏密码以重置隐私笔记密码");
+            if (i == null) {
+                toast("本机未设置锁屏密码，请用旧密码验证");
+                askOldPin();
+                return;
+            }
+            try {
+                deviceLauncher.launch(i);
+            } catch (Exception e) {
+                toast("无法打开系统验证：" + e.getMessage());
+            }
+        } else {
+            askOldPin();
+        }
+    }
+
+    private void askOldPin() {
+        final android.widget.EditText et = pinInput("旧密码");
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                .setTitle("验证旧密码")
+                .setView(wrap(et))
+                .setPositiveButton("下一步", (d, w) -> {
+                    if (PrivacyPrefs.verifyPin(this, et.getText().toString().trim())) {
+                        chooseNewPasswordMode();
+                    } else {
+                        toast("密码错误");
+                    }
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
+    private void chooseNewPasswordMode() {
+        boolean deviceOk = PrivacyPrefs.hasDeviceCredential(this);
+        String[] items = deviceOk
+                ? new String[]{"设置新的数字密码", "改用手机锁屏密码"}
+                : new String[]{"设置新的数字密码"};
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                .setTitle("重置隐私笔记密码")
+                .setItems(items, (d, which) -> {
+                    if (which == 1) {
+                        PrivacyPrefs.useDeviceCredential(this);
+                        updatePrivacyState();
+                        toast("已改为使用手机锁屏密码");
+                    } else {
+                        askNewPin();
+                    }
+                })
+                .show();
+    }
+
+    private void askNewPin() {
+        final android.widget.EditText p1 = pinInput("新密码（4 位以上数字）");
+        final android.widget.EditText p2 = pinInput("再次输入");
+        android.widget.LinearLayout box = new android.widget.LinearLayout(this);
+        box.setOrientation(android.widget.LinearLayout.VERTICAL);
+        int pad = (int) (20 * getResources().getDisplayMetrics().density);
+        box.setPadding(pad, pad / 2, pad, 0);
+        box.addView(p1);
+        box.addView(p2);
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                .setTitle("设置新的数字密码")
+                .setView(box)
+                .setPositiveButton("确定", (d, w) -> {
+                    String a = p1.getText().toString().trim();
+                    String c = p2.getText().toString().trim();
+                    if (a.length() < 4) {
+                        toast("密码至少 4 位数字");
+                        return;
+                    }
+                    if (!a.equals(c)) {
+                        toast("两次输入不一致");
+                        return;
+                    }
+                    PrivacyPrefs.setPin(this, a);
+                    updatePrivacyState();
+                    toast("隐私密码已更新");
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
+    private android.widget.EditText pinInput(String hint) {
+        android.widget.EditText et = new android.widget.EditText(this);
+        et.setHint(hint);
+        et.setSingleLine(true);
+        et.setInputType(android.text.InputType.TYPE_CLASS_NUMBER
+                | android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+        return et;
+    }
+
+    private android.view.View wrap(android.view.View v) {
+        android.widget.LinearLayout box = new android.widget.LinearLayout(this);
+        box.setOrientation(android.widget.LinearLayout.VERTICAL);
+        int pad = (int) (20 * getResources().getDisplayMetrics().density);
+        box.setPadding(pad, pad / 2, pad, 0);
+        box.addView(v);
+        return box;
     }
 
     private void updateBgName() {

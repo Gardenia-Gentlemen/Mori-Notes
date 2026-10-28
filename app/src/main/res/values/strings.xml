@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">笔记本</string>
+    <string name="app_name">Mori Notes</string>
     <string name="new_markdown">新建 Markdown 笔记</string>
     <string name="new_mind">新建思维笔记</string>
     <string name="preview">预览</string>

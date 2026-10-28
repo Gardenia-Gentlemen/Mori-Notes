@@ -11,3 +11,4 @@ keystore.properties
 *.keystore
 .idea/
 .DS_Store
+keystore_local.jks

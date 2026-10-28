@@ -13,6 +13,8 @@ public class Note {
     public long updatedAt;
     /** 0 = 正常；>0 = 放入回收站的时间戳 */
     public long deletedAt;
+    /** 隐私笔记：不在主列表显示，只能从主页下拉进入 */
+    public boolean isPrivate;
 
     public Note() {
         id = UUID.randomUUID().toString();
@@ -44,6 +46,7 @@ public class Note {
         o.put("type", type);
         o.put("updatedAt", updatedAt);
         o.put("deletedAt", deletedAt);
+        o.put("isPrivate", isPrivate);
         return o;
     }
 
@@ -55,6 +58,7 @@ public class Note {
                 o.optInt("type", 0),
                 o.optLong("updatedAt", System.currentTimeMillis()));
         n.deletedAt = o.optLong("deletedAt", 0L);
+        n.isPrivate = o.optBoolean("isPrivate", false);
         return n;
     }
 }

@@ -145,12 +145,29 @@ public class NoteStore {
     public List<Note> getNotes() {
         List<Note> copy = new ArrayList<>();
         for (Note n : notes) {
-            if (!n.inTrash()) copy.add(n);
+            if (!n.inTrash() && !n.isPrivate) copy.add(n);
         }
         Collections.sort(copy, (a, b) -> Long.compare(b.updatedAt, a.updatedAt));
         return copy;
     }
 
+    /** 隐私笔记：按更新时间倒序 */
+    public List<Note> getPrivateNotes() {
+        List<Note> copy = new ArrayList<>();
+        for (Note n : notes) {
+            if (!n.inTrash() && n.isPrivate) copy.add(n);
+        }
+        Collections.sort(copy, (a, b) -> Long.compare(b.updatedAt, a.updatedAt));
+        return copy;
+    }
+    /** 设为 / 移出隐私笔记 */
+    public void setPrivate(String id, boolean value) {
+        Note n = find(id);
+        if (n == null) return;
+        n.isPrivate = value;
+        n.updatedAt = System.currentTimeMillis();
+        save();
+    }
     /** 回收站：按删除时间倒序 */
     public List<Note> getTrash() {
         List<Note> copy = new ArrayList<>();
@@ -213,6 +230,7 @@ public class NoteStore {
             existing.content = note.content;
             existing.type = note.type;
             existing.updatedAt = note.updatedAt;
+            existing.isPrivate = note.isPrivate;
         } else {
             notes.add(note);
         }

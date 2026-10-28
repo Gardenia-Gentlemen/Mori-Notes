@@ -1,6 +1,10 @@
 package com.mori.notebook;
 
 import android.content.ContentResolver;
+import android.content.ContentValues;
+import android.os.Build;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -10,6 +14,9 @@ import android.text.Layout;
 import android.view.View;
 import android.widget.TextView;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.util.List;
 
@@ -84,5 +91,75 @@ public final class ExportUtils {
         MindMapView view = new MindMapView(ctx);
         view.setRoots(roots);
         return view.drawToBitmap(widthPx);
+    }
+
+    /** 导出目录名：Download/mori_notes */
+    public static final String DIR_NAME = "mori_notes";
+
+    public static String saveText(Context ctx, String filename, String text) throws Exception {
+        byte[] data = (text == null ? "" : text).getBytes("UTF-8");
+        return writeBytes(ctx, withExt(filename, ".txt"), "text/plain", data);
+    }
+
+    public static String saveBitmap(Context ctx, String filename, Bitmap bmp) throws Exception {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        bmp.compress(Bitmap.CompressFormat.PNG, 100, bos);
+        return writeBytes(ctx, withExt(filename, ".png"), "image/png", bos.toByteArray());
+    }
+
+    private static String withExt(String name, String ext) {
+        String n = name == null ? "" : name.trim();
+        if (n.isEmpty()) n = "笔记";
+        if (!n.toLowerCase().endsWith(ext)) n = n + ext;
+        return n;
+    }
+
+    private static String writeBytes(Context ctx, String name, String mime, byte[] data)
+            throws Exception {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ContentValues cv = new ContentValues();
+            cv.put(MediaStore.MediaColumns.DISPLAY_NAME, name);
+            cv.put(MediaStore.MediaColumns.MIME_TYPE, mime);
+            cv.put(MediaStore.MediaColumns.RELATIVE_PATH,
+                    Environment.DIRECTORY_DOWNLOADS + "/" + DIR_NAME);
+            Uri uri = ctx.getContentResolver()
+                    .insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv);
+            if (uri == null) throw new Exception("无法创建文件");
+            OutputStream os = ctx.getContentResolver().openOutputStream(uri);
+            if (os == null) throw new Exception("无法写入");
+            try {
+                os.write(data);
+                os.flush();
+            } finally {
+                os.close();
+            }
+            return "Download/" + DIR_NAME + "/" + name;
+        }
+        File dir = new File(Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_DOWNLOADS), DIR_NAME);
+        if (!dir.exists() && !dir.mkdirs()) throw new Exception("无法创建目录");
+        File f = new File(dir, name);
+        if (f.exists()) {
+            String base = name;
+            String ext = "";
+            int dot = name.lastIndexOf('.');
+            if (dot > 0) {
+                base = name.substring(0, dot);
+                ext = name.substring(dot);
+            }
+            int i = 1;
+            while (f.exists()) {
+                f = new File(dir, base + "(" + i + ")" + ext);
+                i++;
+            }
+        }
+        FileOutputStream fos = new FileOutputStream(f);
+        try {
+            fos.write(data);
+            fos.flush();
+        } finally {
+            fos.close();
+        }
+        return f.getAbsolutePath();
     }
 }

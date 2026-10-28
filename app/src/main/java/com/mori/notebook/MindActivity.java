@@ -49,25 +49,6 @@ public class MindActivity extends BaseActivity {
         }
         roots = MindNode.parse(note.content);
 
-        exportLauncher = registerForActivityResult(
-                new ActivityResultContracts.StartActivityForResult(),
-                result -> {
-                    try {
-                        if (result.getResultCode() == Activity.RESULT_OK) {
-                            Intent data = result.getData();
-                            Uri uri = data == null ? null : data.getData();
-                            if (uri != null && pendingBitmap != null) {
-                                ExportUtils.writeBitmap(this, uri, pendingBitmap);
-                                Toast.makeText(this, "已导出", Toast.LENGTH_SHORT).show();
-                            }
-                        }
-                    } catch (Exception e) {
-                        Toast.makeText(this, "导出失败：" + e.getMessage(), Toast.LENGTH_SHORT).show();
-                    } finally {
-                        pendingBitmap = null;
-                    }
-                });
-
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         toolbar.inflateMenu(R.menu.menu_mind);
         toolbar.setNavigationOnClickListener(v -> finish());
@@ -212,12 +193,12 @@ public class MindActivity extends BaseActivity {
 
     private void exportImage() {
         try {
-            int w = Math.max(mindMap.getWidth(), (int) (1080));
-            pendingBitmap = mindMap.drawToBitmap(1080);
+            Bitmap bmp = mindMap.drawToBitmap(1080);
             String name = note.title == null || note.title.trim().isEmpty() ? "思维笔记" : note.title.trim();
             name = name.replaceAll("[\\\\/:*?\"<>|]", "_");
             if (name.length() > 30) name = name.substring(0, 30);
-            exportLauncher.launch(ExportUtils.imageIntent(name));
+            String path = ExportUtils.saveBitmap(this, name, bmp);
+            Toast.makeText(this, "已导出到 " + path, Toast.LENGTH_LONG).show();
         } catch (Exception e) {
             Toast.makeText(this, "导出失败：" + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
