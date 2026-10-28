@@ -210,6 +210,15 @@ public class NoteStore {
         if (changed) save();
     }
 
+    /** 清空回收站，返回彻底删除的条数 */
+    public int clearTrash() {
+        int before = notes.size();
+        notes.removeIf(n -> n.inTrash());
+        int removed = before - notes.size();
+        if (removed > 0) save();
+        return removed;
+    }
+
     public void deleteForever(String id) {
         notes.removeIf(n -> n.id.equals(id));
         save();

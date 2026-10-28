@@ -24,6 +24,10 @@ public class SettingsActivity extends BaseActivity {
     private ActivityResultLauncher<Intent> authLauncher;
     private ActivityResultLauncher<String[]> importLauncher;
     private Runnable pendingAuthAction;
+    /** 导出：等用户在系统文件选择器里指定保存位置 */
+    private ActivityResultLauncher<String> exportLauncher;
+    private byte[] pendingExportBytes;
+    private int pendingExportCount;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,6 +49,23 @@ public class SettingsActivity extends BaseActivity {
         importLauncher = registerForActivityResult(
                 new ActivityResultContracts.OpenDocument(), uri -> {
                     if (uri != null) doImportMori(uri);
+                });
+        exportLauncher = registerForActivityResult(
+                new ActivityResultContracts.CreateDocument("application/octet-stream"),
+                uri -> {
+                    byte[] data = pendingExportBytes;
+                    int count = pendingExportCount;
+                    pendingExportBytes = null;
+                    if (uri == null || data == null) {
+                        toast("已取消导出");
+                        return;
+                    }
+                    try {
+                        ExportUtils.writeBytes(this, uri, data);
+                        toast("已导出 " + count + " 条笔记到所选位置");
+                    } catch (Exception e) {
+                        toast("写入失败：" + e.getMessage());
+                    }
                 });
 
         folderPicker = registerForActivityResult(new ActivityResultContracts.OpenDocumentTree(), uri -> {
@@ -367,9 +388,17 @@ public class SettingsActivity extends BaseActivity {
             byte[] data = MoriFile.build(list, scope, enc, pin);
             String ts = new java.text.SimpleDateFormat("yyyyMMdd-HHmmss",
                     java.util.Locale.US).format(new java.util.Date());
-            String path = ExportUtils.saveBytes(this, "Mori-notes-" + ts + MoriFile.EXT,
-                    "application/octet-stream", data);
-            toast("已导出 " + list.size() + " 条笔记到 " + path);
+            String name = "Mori-notes-" + ts + MoriFile.EXT;
+            pendingExportBytes = data;
+            pendingExportCount = list.size();
+            try {
+                exportLauncher.launch(name);
+            } catch (Exception noPicker) {
+                String path = ExportUtils.saveBytes(this, name,
+                        "application/octet-stream", data);
+                pendingExportBytes = null;
+                toast("已导出 " + list.size() + " 条笔记到 " + path);
+            }
         } catch (Exception e) {
             toast("导出失败：" + e.getMessage());
         }

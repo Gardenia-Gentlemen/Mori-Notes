@@ -26,6 +26,7 @@ public class TrashActivity extends BaseActivity {
     private RecyclerView recycler;
     private TextView tvEmpty;
     private Adapter adapter;
+    private MaterialToolbar toolbar;
     private final List<Note> data = new ArrayList<>();
     private final SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault());
 
@@ -35,8 +36,16 @@ public class TrashActivity extends BaseActivity {
         setContentView(R.layout.activity_trash);
         store = NoteStore.get(this);
 
-        MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        toolbar = findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
+        toolbar.inflateMenu(R.menu.menu_trash);
+        toolbar.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == R.id.action_clear_trash) {
+                confirmClearTrash();
+                return true;
+            }
+            return false;
+        });
 
         recycler = findViewById(R.id.recycler);
         tvEmpty = findViewById(R.id.tv_empty);
@@ -59,6 +68,26 @@ public class TrashActivity extends BaseActivity {
         adapter.notifyDataSetChanged();
         tvEmpty.setVisibility(data.isEmpty() ? View.VISIBLE : View.GONE);
         recycler.setVisibility(data.isEmpty() ? View.GONE : View.VISIBLE);
+        android.view.MenuItem clear = toolbar.getMenu().findItem(R.id.action_clear_trash);
+        if (clear != null) clear.setVisible(!data.isEmpty());
+    }
+
+    private void confirmClearTrash() {
+        final int count = data.size();
+        if (count == 0) {
+            Toast.makeText(this, "回收站已经是空的", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("清空回收站")
+                .setMessage("将彻底删除回收站中的 " + count + " 条笔记，删除后无法恢复。")
+                .setPositiveButton("清空", (d, w) -> {
+                    int removed = store.clearTrash();
+                    reload();
+                    Toast.makeText(this, "已清空 " + removed + " 条", Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("取消", null)
+                .show();
     }
 
     private void showMenu(Note note) {

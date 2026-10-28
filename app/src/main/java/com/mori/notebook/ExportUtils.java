@@ -107,6 +107,20 @@ public final class ExportUtils {
         return writeBytes(ctx, withExt(filename, ".png"), "image/png", bos.toByteArray());
     }
 
+    /** 把字节写入用户通过系统文件选择器指定的位置 */
+    public static void writeBytes(Context ctx, Uri uri, byte[] data) throws Exception {
+        if (uri == null) throw new Exception("无效路径");
+        OutputStream os = ctx.getContentResolver().openOutputStream(uri, "wt");
+        if (os == null) os = ctx.getContentResolver().openOutputStream(uri);
+        if (os == null) throw new Exception("无法写入");
+        try {
+            os.write(data == null ? new byte[0] : data);
+            os.flush();
+        } finally {
+            os.close();
+        }
+    }
+
     /** 保存任意字节内容（.mori 等自定义格式） */
     public static String saveBytes(Context ctx, String filename, String mime, byte[] data)
             throws Exception {
