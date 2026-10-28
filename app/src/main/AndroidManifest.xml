@@ -14,10 +14,37 @@
 
         <activity
             android:name=".MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:launchMode="singleTop">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- 用本软件打开 .mori 备份文件（按扩展名匹配） -->
+            <intent-filter android:label="用 Mori Notes 打开">
+                <action android:name="android.intent.action.VIEW" />
+                <action android:name="android.intent.action.FILE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" android:host="*" android:pathPattern=".*\\.mori" />
+                <data android:scheme="content" android:host="*" android:pathPattern=".*\\..*\\.mori" />
+                <data android:scheme="file" android:host="*" android:pathPattern=".*\\.mori" />
+                <data android:scheme="file" android:host="*" android:pathPattern=".*\\..*\\.mori" />
+            </intent-filter>
+            <!-- 部分文件管理器只按 MIME 分发 -->
+            <intent-filter android:label="用 Mori Notes 打开">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:mimeType="application/octet-stream" />
+                <data android:mimeType="application/x-mori" />
+            </intent-filter>
+            <!-- 分享文件到本软件 -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="*/*" />
             </intent-filter>
         </activity>
 

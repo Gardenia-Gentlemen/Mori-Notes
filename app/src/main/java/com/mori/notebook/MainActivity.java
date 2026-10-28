@@ -1,6 +1,7 @@
 package com.mori.notebook;
 
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.TextView;
@@ -27,6 +28,8 @@ public class MainActivity extends BaseActivity {
     private float pullDownY;
     private boolean pullFromTop;
     private static final int PULL_THRESHOLD_DP = 72;
+    /** 已处理过的外部文件 Uri，避免重复导入 */
+    private Uri lastOpenedUri;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -290,5 +293,23 @@ public class MainActivity extends BaseActivity {
         super.onResume();
         reload();
         applyLayoutMode();
+        handleOpenIntent(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleOpenIntent(intent);
+    }
+
+    /** 处理「用本软件打开 .mori 文件」 */
+    private void handleOpenIntent(Intent intent) {
+        if (!MoriImporter.isOpenFileIntent(intent)) return;
+        Uri uri = MoriImporter.uriFromIntent(intent);
+        if (uri == null) return;
+        if (uri.equals(lastOpenedUri)) return;
+        lastOpenedUri = uri;
+        MoriImporter.handle(this, uri, this::reload);
     }
 }

@@ -413,6 +413,10 @@ public class SettingsActivity extends BaseActivity {
     }
 
     private void doImportMori(Uri uri) {
+        MoriImporter.handle(this, uri, null);
+    }
+
+    private void doImportMoriLegacy(Uri uri) {
         String name = displayName(uri);
         if (name == null || !name.toLowerCase(java.util.Locale.US).endsWith(MoriFile.EXT)) {
             toast("只能导入 .mori 后缀的文件");
