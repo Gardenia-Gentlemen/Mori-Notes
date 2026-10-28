@@ -241,4 +241,38 @@ public class NoteStore {
         notes.removeIf(n -> n.id.equals(id));
         save();
     }
+
+    /** 按导出范围取笔记（不含回收站） */
+    public List<Note> notesForScope(String scope) {
+        List<Note> copy = new ArrayList<>();
+        for (Note n : notes) {
+            if (n.inTrash()) continue;
+            if (MoriFile.SCOPE_PRIVATE.equals(scope)) {
+                if (n.isPrivate) copy.add(n);
+            } else if (MoriFile.SCOPE_NORMAL.equals(scope)) {
+                if (!n.isPrivate) copy.add(n);
+            } else {
+                copy.add(n);
+            }
+        }
+        Collections.sort(copy, (a, b) -> Long.compare(b.updatedAt, a.updatedAt));
+        return copy;
+    }
+
+    /** 批量导入（.mori）；id 冲突时换新 id，保留 isPrivate 归属，不进入回收站 */
+    public int importNotes(List<Note> incoming) {
+        if (incoming == null || incoming.isEmpty()) return 0;
+        int added = 0;
+        for (Note n : incoming) {
+            if (n == null) continue;
+            if (n.id == null || n.id.trim().isEmpty() || find(n.id) != null) {
+                n.id = java.util.UUID.randomUUID().toString();
+            }
+            n.deletedAt = 0L;
+            notes.add(n);
+            added++;
+        }
+        if (added > 0) save();
+        return added;
+    }
 }

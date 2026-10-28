@@ -107,6 +107,14 @@ public final class ExportUtils {
         return writeBytes(ctx, withExt(filename, ".png"), "image/png", bos.toByteArray());
     }
 
+    /** 保存任意字节内容（.mori 等自定义格式） */
+    public static String saveBytes(Context ctx, String filename, String mime, byte[] data)
+            throws Exception {
+        String n = filename == null ? "" : filename.trim();
+        if (n.isEmpty()) n = "Mori-notes.mori";
+        return writeBytes(ctx, n, mime == null ? "application/octet-stream" : mime, data);
+    }
+
     private static String withExt(String name, String ext) {
         String n = name == null ? "" : name.trim();
         if (n.isEmpty()) n = "笔记";
