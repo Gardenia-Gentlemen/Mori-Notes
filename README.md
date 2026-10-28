@@ -38,37 +38,7 @@ gradle assembleRelease
 > 如果在 arm64 / aarch64 环境下构建，AAPT2 需要本地替换：在 `~/.gradle/gradle.properties` 里加一行
 > `android.aapt2FromMavenOverride=/path/to/android-sdk/build-tools/34.0.0/aapt2`。此项不进仓库。
 
-## 目录
 
-```
-app/src/main/java/com/mori/notebook/
-├── MainActivity.java        笔记列表、宫格/列表切换、长按菜单（重命名 / 分享图片 / 删除）
-├── NoteEditActivity.java    文档笔记编辑、预览、插图、导出
-├── MindActivity.java        思维笔记：大纲 + 脑图
-├── MindMapView.java         脑图自绘视图（缩放 / 平移 / 绘到 Bitmap）
-├── TrashActivity.java       回收站
-├── ShareUtils.java          渲染为图片并分享
-├── NoteStore.java           笔记存取、回收站、10 天过期清理
-└── ...
-```
-
-
-## 安装包
-
-每个版本一个独立文件夹，放在 `releases/` 下：
-
-```
-releases/
-├── v1.0/        历史版本
-├── v1.1/
-├── v1.2/
-├── v1.2.1/ ~ v1.2.5/
-└── v1.3/        当前版本
-```
-
-当前版本为 `releases/v1.3/笔记本-Notebook-v1.3.apk`（versionCode 10），签名 CN=Mori_Akira，可直接覆盖安装。
-
-## 版本
 
 见 [CHANGELOG.md](CHANGELOG.md)。
 
