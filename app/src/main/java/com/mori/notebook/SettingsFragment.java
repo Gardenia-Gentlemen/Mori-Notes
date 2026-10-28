@@ -3,54 +3,60 @@ package com.mori.notebook;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
 import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
 
-import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.slider.Slider;
 
-public class SettingsActivity extends BaseActivity {
+public class SettingsFragment extends Fragment {
+
     private TextView tvLocation;
     private TextView tvBgName;
     private TextView tvPrivacyState;
+
     private ActivityResultLauncher<Intent> deviceLauncher;
     private ActivityResultLauncher<Uri> folderPicker;
     private ActivityResultLauncher<Intent> authLauncher;
     private ActivityResultLauncher<String[]> importLauncher;
     private Runnable pendingAuthAction;
+
     /** 导出：等用户在系统文件选择器里指定保存位置 */
     private ActivityResultLauncher<String> exportLauncher;
     private byte[] pendingExportBytes;
     private int pendingExportCount;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_settings);
-        setupBottomNav(R.id.action_nav_settings);
 
-        MaterialToolbar toolbar = findViewById(R.id.toolbar);
-        toolbar.setNavigationOnClickListener(v -> finish());
         authLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(), result -> {
                     Runnable r = pendingAuthAction;
                     pendingAuthAction = null;
-                    if (result.getResultCode() == RESULT_OK && r != null) {
+                    if (result.getResultCode() == android.app.Activity.RESULT_OK && r != null) {
                         r.run();
                     } else {
                         toast("未通过验证，已取消导出");
                     }
                 });
+
         importLauncher = registerForActivityResult(
                 new ActivityResultContracts.OpenDocument(), uri -> {
                     if (uri != null) doImportMori(uri);
                 });
+
         exportLauncher = registerForActivityResult(
                 new ActivityResultContracts.CreateDocument("application/octet-stream"),
                 uri -> {
@@ -62,7 +68,7 @@ public class SettingsActivity extends BaseActivity {
                         return;
                     }
                     try {
-                        ExportUtils.writeBytes(this, uri, data);
+                        ExportUtils.writeBytes(requireContext(), uri, data);
                         toast("已导出 " + count + " 条笔记到所选位置");
                     } catch (Exception e) {
                         toast("写入失败：" + e.getMessage());
@@ -72,58 +78,86 @@ public class SettingsActivity extends BaseActivity {
         folderPicker = registerForActivityResult(new ActivityResultContracts.OpenDocumentTree(), uri -> {
             if (uri == null) return;
             try {
-                getContentResolver().takePersistableUriPermission(uri,
+                requireContext().getContentResolver().takePersistableUriPermission(uri,
                         Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
             } catch (Exception ignored) {
             }
-            NoteStore store = NoteStore.get(this);
+            NoteStore store = NoteStore.get(requireContext());
             boolean loaded = store.switchLocation(uri);
-            tvLocation.setText(store.locationLabel());
+            if (tvLocation != null) tvLocation.setText(store.locationLabel());
             toast(loaded ? "已切换到该目录，加载了其中已有的笔记" : "笔记已保存到该目录");
         });
 
-        RadioGroup rg = findViewById(R.id.rg_theme);
-        int mode = UiPrefs.getThemeMode(this);
+        deviceLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(), result -> {
+                    if (result.getResultCode() == android.app.Activity.RESULT_OK) {
+                        chooseNewPasswordMode();
+                    } else {
+                        toast("未通过验证，无法重置");
+                    }
+                });
+    }
+
+    @Nullable
+    @Override
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
+                             @Nullable Bundle savedInstanceState) {
+        return inflater.inflate(R.layout.fragment_settings, container, false);
+    }
+
+    @Override
+    public void onViewCreated(@NonNull View v, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(v, savedInstanceState);
+
+        RadioGroup rg = v.findViewById(R.id.rg_theme);
+        int mode = UiPrefs.getThemeMode(requireContext());
         rg.check(mode == 1 ? R.id.radio_light : mode == 2 ? R.id.radio_dark : R.id.radio_follow);
         rg.setOnCheckedChangeListener((group, checkedId) -> {
             int m = checkedId == R.id.radio_light ? 1 : checkedId == R.id.radio_dark ? 2 : 0;
-            if (m == UiPrefs.getThemeMode(this)) return;
-            UiPrefs.setThemeMode(this, m);
-            NotebookApp.applyTheme(this);
-            recreate();
+            if (m == UiPrefs.getThemeMode(requireContext())) return;
+            UiPrefs.setThemeMode(requireContext(), m);
+            NotebookApp.applyTheme(requireContext());
+            requireActivity().recreate();
         });
 
-        tvBgName = findViewById(R.id.tv_bg_name);
+        tvBgName = v.findViewById(R.id.tv_bg_name);
         updateBgName();
-        MaterialButton btnBg = findViewById(R.id.btn_background);
-        btnBg.setOnClickListener(v -> showBackgroundPicker());
+        MaterialButton btnBg = v.findViewById(R.id.btn_background);
+        btnBg.setOnClickListener(x -> {
+            if (getActivity() instanceof BaseActivity) {
+                ((BaseActivity) getActivity()).showBackgroundPicker();
+            }
+        });
 
-        MaterialSwitch swBold = findViewById(R.id.sw_title_bold);
-        swBold.setChecked(UiPrefs.isHomeTitleBold(this));
-        swBold.setOnCheckedChangeListener((b, checked) -> UiPrefs.setHomeTitleBold(this, checked));
+        MaterialSwitch swBold = v.findViewById(R.id.sw_title_bold);
+        swBold.setChecked(UiPrefs.isHomeTitleBold(requireContext()));
+        swBold.setOnCheckedChangeListener((b, checked) ->
+                UiPrefs.setHomeTitleBold(requireContext(), checked));
 
-        final TextView tvValue = findViewById(R.id.tv_scale_value);
-        Slider slider = findViewById(R.id.slider_scale);
-        float cur = UiPrefs.getHomeTitleScale(this);
+        final TextView tvValue = v.findViewById(R.id.tv_scale_value);
+        Slider slider = v.findViewById(R.id.slider_scale);
+        float cur = UiPrefs.getHomeTitleScale(requireContext());
         slider.setValue(Math.max(0.8f, Math.min(1.4f, cur)));
         tvValue.setText(percent(cur));
         slider.addOnChangeListener((s, value, fromUser) -> {
-            UiPrefs.setHomeTitleScale(this, value);
+            UiPrefs.setHomeTitleScale(requireContext(), value);
             tvValue.setText(percent(value));
         });
 
-        tvLocation = findViewById(R.id.tv_location);
-        tvLocation.setText(NoteStore.get(this).locationLabel());
-        TextView tvVer = findViewById(R.id.tv_version);
+        tvLocation = v.findViewById(R.id.tv_location);
+        tvLocation.setText(NoteStore.get(requireContext()).locationLabel());
+
+        TextView tvVer = v.findViewById(R.id.tv_version);
         try {
-            android.content.pm.PackageInfo pi = getPackageManager().getPackageInfo(getPackageName(), 0);
+            android.content.pm.PackageInfo pi = requireContext().getPackageManager()
+                    .getPackageInfo(requireContext().getPackageName(), 0);
             tvVer.setText("版本 " + pi.versionName + "  (" + pi.versionCode + ")");
         } catch (Exception e) {
             tvVer.setText("版本未知");
         }
 
-        MaterialButton pick = findViewById(R.id.btn_pick_folder);
-        pick.setOnClickListener(v -> {
+        MaterialButton pick = v.findViewById(R.id.btn_pick_folder);
+        pick.setOnClickListener(x -> {
             try {
                 folderPicker.launch(null);
             } catch (Exception e) {
@@ -131,25 +165,21 @@ public class SettingsActivity extends BaseActivity {
             }
         });
 
-        tvPrivacyState = findViewById(R.id.tv_privacy_state);
+        tvPrivacyState = v.findViewById(R.id.tv_privacy_state);
         updatePrivacyState();
-        deviceLauncher = registerForActivityResult(
-                new ActivityResultContracts.StartActivityForResult(), result -> {
-                    if (result.getResultCode() == RESULT_OK) {
-                        chooseNewPasswordMode();
-                    } else {
-                        toast("未通过验证，无法重置");
-                    }
-                });
-        MaterialButton btnResetPrivacy = findViewById(R.id.btn_reset_privacy);
-        btnResetPrivacy.setOnClickListener(v -> startResetPassword());
-        MaterialButton btnExportNotes = findViewById(R.id.btn_export_notes);
-        btnExportNotes.setOnClickListener(v -> startExportMori());
-        MaterialButton btnImportNotes = findViewById(R.id.btn_import_notes);
-        btnImportNotes.setOnClickListener(v -> startImportMori());
-        MaterialButton reset = findViewById(R.id.btn_reset_folder);
-        reset.setOnClickListener(v -> {
-            NoteStore store = NoteStore.get(this);
+
+        MaterialButton btnResetPrivacy = v.findViewById(R.id.btn_reset_privacy);
+        btnResetPrivacy.setOnClickListener(x -> startResetPassword());
+
+        MaterialButton btnExportNotes = v.findViewById(R.id.btn_export_notes);
+        btnExportNotes.setOnClickListener(x -> startExportMori());
+
+        MaterialButton btnImportNotes = v.findViewById(R.id.btn_import_notes);
+        btnImportNotes.setOnClickListener(x -> startImportMori());
+
+        MaterialButton reset = v.findViewById(R.id.btn_reset_folder);
+        reset.setOnClickListener(x -> {
+            NoteStore store = NoteStore.get(requireContext());
             store.useInternal();
             tvLocation.setText(store.locationLabel());
             toast("已恢复为应用内部存储");
@@ -157,18 +187,18 @@ public class SettingsActivity extends BaseActivity {
     }
 
     @Override
-    protected void onResume() {
+    public void onResume() {
         super.onResume();
         updateBgName();
         updatePrivacyState();
     }
 
     private void updatePrivacyState() {
-        if (tvPrivacyState == null) return;
+        if (tvPrivacyState == null || !isAdded()) return;
         String mode;
-        if (!PrivacyPrefs.isConfigured(this)) {
+        if (!PrivacyPrefs.isConfigured(requireContext())) {
             mode = "未设置";
-        } else if (PrivacyPrefs.isDeviceMode(this)) {
+        } else if (PrivacyPrefs.isDeviceMode(requireContext())) {
             mode = "手机锁屏密码";
         } else {
             mode = "数字密码";
@@ -178,12 +208,13 @@ public class SettingsActivity extends BaseActivity {
 
     /** 重置密码：先验证旧密码或手机锁屏密码 */
     private void startResetPassword() {
-        if (!PrivacyPrefs.isConfigured(this)) {
+        if (!PrivacyPrefs.isConfigured(requireContext())) {
             chooseNewPasswordMode();
             return;
         }
-        if (PrivacyPrefs.isDeviceMode(this)) {
-            Intent i = PrivacyPrefs.deviceCredentialIntent(this, "验证身份", "验证手机锁屏密码以重置隐私笔记密码");
+        if (PrivacyPrefs.isDeviceMode(requireContext())) {
+            Intent i = PrivacyPrefs.deviceCredentialIntent(requireContext(),
+                    "验证身份", "验证手机锁屏密码以重置隐私笔记密码");
             if (i == null) {
                 toast("本机未设置锁屏密码，请用旧密码验证");
                 askOldPin();
@@ -201,11 +232,11 @@ public class SettingsActivity extends BaseActivity {
 
     private void askOldPin() {
         final android.widget.EditText et = pinInput("旧密码");
-        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
                 .setTitle("验证旧密码")
                 .setView(wrap(et))
                 .setPositiveButton("下一步", (d, w) -> {
-                    if (PrivacyPrefs.verifyPin(this, et.getText().toString().trim())) {
+                    if (PrivacyPrefs.verifyPin(requireContext(), et.getText().toString().trim())) {
                         chooseNewPasswordMode();
                     } else {
                         toast("密码错误");
@@ -216,15 +247,15 @@ public class SettingsActivity extends BaseActivity {
     }
 
     private void chooseNewPasswordMode() {
-        boolean deviceOk = PrivacyPrefs.hasDeviceCredential(this);
+        boolean deviceOk = PrivacyPrefs.hasDeviceCredential(requireContext());
         String[] items = deviceOk
                 ? new String[]{"设置新的数字密码", "改用手机锁屏密码"}
                 : new String[]{"设置新的数字密码"};
-        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
                 .setTitle("重置隐私笔记密码")
                 .setItems(items, (d, which) -> {
                     if (which == 1) {
-                        PrivacyPrefs.useDeviceCredential(this);
+                        PrivacyPrefs.useDeviceCredential(requireContext());
                         updatePrivacyState();
                         toast("已改为使用手机锁屏密码");
                     } else {
@@ -237,13 +268,13 @@ public class SettingsActivity extends BaseActivity {
     private void askNewPin() {
         final android.widget.EditText p1 = pinInput("新密码（4 位以上数字）");
         final android.widget.EditText p2 = pinInput("再次输入");
-        android.widget.LinearLayout box = new android.widget.LinearLayout(this);
+        android.widget.LinearLayout box = new android.widget.LinearLayout(requireContext());
         box.setOrientation(android.widget.LinearLayout.VERTICAL);
         int pad = (int) (20 * getResources().getDisplayMetrics().density);
         box.setPadding(pad, pad / 2, pad, 0);
         box.addView(p1);
         box.addView(p2);
-        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
                 .setTitle("设置新的数字密码")
                 .setView(box)
                 .setPositiveButton("确定", (d, w) -> {
@@ -257,7 +288,7 @@ public class SettingsActivity extends BaseActivity {
                         toast("两次输入不一致");
                         return;
                     }
-                    PrivacyPrefs.setPin(this, a);
+                    PrivacyPrefs.setPin(requireContext(), a);
                     updatePrivacyState();
                     toast("隐私密码已更新");
                 })
@@ -266,7 +297,7 @@ public class SettingsActivity extends BaseActivity {
     }
 
     private android.widget.EditText pinInput(String hint) {
-        android.widget.EditText et = new android.widget.EditText(this);
+        android.widget.EditText et = new android.widget.EditText(requireContext());
         et.setHint(hint);
         et.setSingleLine(true);
         et.setInputType(android.text.InputType.TYPE_CLASS_NUMBER
@@ -275,7 +306,7 @@ public class SettingsActivity extends BaseActivity {
     }
 
     private android.view.View wrap(android.view.View v) {
-        android.widget.LinearLayout box = new android.widget.LinearLayout(this);
+        android.widget.LinearLayout box = new android.widget.LinearLayout(requireContext());
         box.setOrientation(android.widget.LinearLayout.VERTICAL);
         int pad = (int) (20 * getResources().getDisplayMetrics().density);
         box.setPadding(pad, pad / 2, pad, 0);
@@ -287,7 +318,7 @@ public class SettingsActivity extends BaseActivity {
 
     private void startExportMori() {
         String[] items = {"仅导出常规笔记", "仅导出隐私笔记", "全部导出"};
-        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
                 .setTitle("整机笔记导出")
                 .setItems(items, (d, which) -> {
                     if (which == 0) {
@@ -303,13 +334,13 @@ public class SettingsActivity extends BaseActivity {
 
     /** 导出隐私/全部前必须通过隐私密码认证 */
     private void requirePrivacyAuth(Runnable next) {
-        if (!PrivacyPrefs.isConfigured(this)) {
+        if (!PrivacyPrefs.isConfigured(requireContext())) {
             toast("请先在本页设置隐私笔记密码");
             return;
         }
         pendingAuthAction = next;
-        if (PrivacyPrefs.isDeviceMode(this)) {
-            Intent i = PrivacyPrefs.deviceCredentialIntent(this,
+        if (PrivacyPrefs.isDeviceMode(requireContext())) {
+            Intent i = PrivacyPrefs.deviceCredentialIntent(requireContext(),
                     "验证身份", "验证手机锁屏密码后才能导出隐私笔记");
             if (i == null) {
                 askPrivacyPin(next);
@@ -328,11 +359,11 @@ public class SettingsActivity extends BaseActivity {
 
     private void askPrivacyPin(Runnable next) {
         final android.widget.EditText et = pinInput("隐私笔记密码");
-        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
                 .setTitle("验证隐私密码")
                 .setView(wrap(et))
                 .setPositiveButton("下一步", (d, w) -> {
-                    if (PrivacyPrefs.verifyPin(this, et.getText().toString().trim())) {
+                    if (PrivacyPrefs.verifyPin(requireContext(), et.getText().toString().trim())) {
                         next.run();
                     } else {
                         toast("密码错误");
@@ -350,13 +381,13 @@ public class SettingsActivity extends BaseActivity {
         }
         final android.widget.EditText p1 = pinInput("8 位数字密码");
         final android.widget.EditText p2 = pinInput("再次输入");
-        android.widget.LinearLayout box = new android.widget.LinearLayout(this);
+        android.widget.LinearLayout box = new android.widget.LinearLayout(requireContext());
         box.setOrientation(android.widget.LinearLayout.VERTICAL);
         int pad = (int) (20 * getResources().getDisplayMetrics().density);
         box.setPadding(pad, pad / 2, pad, 0);
         box.addView(p1);
         box.addView(p2);
-        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
                 .setTitle("设置文件密码")
                 .setMessage("导出文件将用该密码加密，导入时需要输入")
                 .setView(box)
@@ -378,7 +409,7 @@ public class SettingsActivity extends BaseActivity {
     }
 
     private void doExportMori(String scope, String pin) {
-        NoteStore store = NoteStore.get(this);
+        NoteStore store = NoteStore.get(requireContext());
         java.util.List<Note> list = store.notesForScope(scope);
         if (list.isEmpty()) {
             toast("没有可导出的笔记");
@@ -395,7 +426,7 @@ public class SettingsActivity extends BaseActivity {
             try {
                 exportLauncher.launch(name);
             } catch (Exception noPicker) {
-                String path = ExportUtils.saveBytes(this, name,
+                String path = ExportUtils.saveBytes(requireContext(), name,
                         "application/octet-stream", data);
                 pendingExportBytes = null;
                 toast("已导出 " + list.size() + " 条笔记到 " + path);
@@ -414,95 +445,12 @@ public class SettingsActivity extends BaseActivity {
     }
 
     private void doImportMori(Uri uri) {
-        MoriImporter.handle(this, uri, null);
-    }
-
-    private void doImportMoriLegacy(Uri uri) {
-        String name = displayName(uri);
-        if (name == null || !name.toLowerCase(java.util.Locale.US).endsWith(MoriFile.EXT)) {
-            toast("只能导入 .mori 后缀的文件");
-            return;
-        }
-        String text;
-        try {
-            text = readAll(uri);
-        } catch (Exception e) {
-            toast("读取失败：" + e.getMessage());
-            return;
-        }
-        org.json.JSONObject head;
-        try {
-            head = MoriFile.head(text);
-        } catch (Exception e) {
-            toast("不是有效的 .mori 文件");
-            return;
-        }
-        if (head.optBoolean("encrypted", false)) {
-            askImportPassword(text);
-        } else {
-            finishImport(text, null);
-        }
-    }
-
-    private void askImportPassword(String text) {
-        final android.widget.EditText et = pinInput("8 位数字密码");
-        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
-                .setTitle("文件已加密")
-                .setView(wrap(et))
-                .setPositiveButton("导入", (d, w) -> {
-                    String pin = et.getText().toString().trim();
-                    if (!MoriFile.isValidPin(pin)) {
-                        toast("密码必须是 8 位数字");
-                        return;
-                    }
-                    finishImport(text, pin);
-                })
-                .setNegativeButton("取消", null)
-                .show();
-    }
-
-    private void finishImport(String text, String pin) {
-        try {
-            MoriFile.Package pkg = MoriFile.parse(text, pin);
-            if (pkg.notes.isEmpty()) {
-                toast("文件中没有笔记");
-                return;
-            }
-            int n = NoteStore.get(this).importNotes(pkg.notes);
-            toast("已导入 " + n + " 条笔记");
-        } catch (MoriFile.BadPasswordException e) {
-            toast("密码错误，无法解密");
-        } catch (Exception e) {
-            toast("导入失败：" + e.getMessage());
-        }
-    }
-
-    private String displayName(Uri uri) {
-        try (android.database.Cursor c = getContentResolver().query(uri, null, null, null, null)) {
-            if (c != null && c.moveToFirst()) {
-                int idx = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME);
-                if (idx >= 0) return c.getString(idx);
-            }
-        } catch (Exception ignored) {
-        }
-        String p = uri.getLastPathSegment();
-        return p == null ? "" : p;
-    }
-
-    private String readAll(Uri uri) throws Exception {
-        try (java.io.InputStream in = getContentResolver().openInputStream(uri);
-             java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream()) {
-            if (in == null) throw new Exception("无法打开文件");
-            byte[] buf = new byte[8192];
-            int len;
-            while ((len = in.read(buf)) > 0) bos.write(buf, 0, len);
-            return new String(bos.toByteArray(), java.nio.charset.StandardCharsets.UTF_8);
-        }
+        MoriImporter.handle(requireActivity(), uri, null);
     }
 
     private void updateBgName() {
-        if (tvBgName == null) return;
-        int style = BackgroundPrefs.getStyle(this);
+        if (tvBgName == null || !isAdded()) return;
+        int style = BackgroundPrefs.getStyle(requireContext());
         String name = (style >= 0 && style < BackgroundPrefs.NAMES.length)
                 ? BackgroundPrefs.NAMES[style] : BackgroundPrefs.NAMES[0];
         tvBgName.setText("当前：" + name);
@@ -513,6 +461,6 @@ public class SettingsActivity extends BaseActivity {
     }
 
     private void toast(String s) {
-        Toast.makeText(this, s, Toast.LENGTH_SHORT).show();
+        if (isAdded()) Toast.makeText(requireContext(), s, Toast.LENGTH_SHORT).show();
     }
 }

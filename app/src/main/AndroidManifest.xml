@@ -70,9 +70,6 @@
             android:name=".MindActivity"
             android:parentActivityName=".MainActivity" />
         <activity
-            android:name=".SettingsActivity"
-            android:parentActivityName=".MainActivity" />
-        <activity
             android:name=".TrashActivity"
             android:parentActivityName=".MainActivity" />
         <activity

@@ -34,7 +34,6 @@ public class TrashActivity extends BaseActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_trash);
-        setupBottomNav(R.id.action_nav_trash);
         store = NoteStore.get(this);
 
         toolbar = findViewById(R.id.toolbar);

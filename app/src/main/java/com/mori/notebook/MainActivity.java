@@ -4,308 +4,136 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.TextView;
-import android.widget.Toast;
 
-import androidx.recyclerview.widget.GridLayoutManager;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
+import androidx.annotation.NonNull;
+import androidx.fragment.app.Fragment;
+import androidx.viewpager2.adapter.FragmentStateAdapter;
+import androidx.viewpager2.widget.ViewPager2;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
-import java.util.List;
-
+/**
+ * 主页 / 设置 共用一个 ViewPager2，跟手真实滑动，底部导航双向联动。
+ * 回收站仍为独立页面，入口在顶栏菜单。
+ */
 public class MainActivity extends BaseActivity {
-    private NoteStore store;
-    private NoteAdapter adapter;
-    private RecyclerView recycler;
-    private TextView emptyView;
-    /** 多选模式 */
-    private boolean selecting;
-    /** 下拉进入隐私笔记 */
-    private float pullDownY;
-    private boolean pullFromTop;
-    private static final int PULL_THRESHOLD_DP = 72;
-    /** 已处理过的外部文件 Uri，避免重复导入 */
-    private Uri lastOpenedUri;
+
+    private static final int PAGE_HOME = 0;
+    private static final int PAGE_SETTINGS = 1;
+
+    private ViewPager2 pager;
+    private BottomNavigationView nav;
+    private MaterialToolbar toolbar;
+    private HomeFragment homeFragment;
+    /** 尚未交付给主页的外部 .mori 文件 Uri */
+    private Uri pendingUri;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        store = NoteStore.get(this);
-        MaterialToolbar toolbar = findViewById(R.id.toolbar);
-        toolbar.inflateMenu(R.menu.menu_main);
-        toolbar.setOnMenuItemClickListener(item -> {
-            if (item.getItemId() == R.id.action_grid) {
-                toggleGrid();
-                return true;
-            }
-            return handleSelectAction(item.getItemId());
-        });
-        setupBottomNav(R.id.action_nav_home);
-        recycler = findViewById(R.id.recycler);
-        emptyView = findViewById(R.id.tv_empty);
-        adapter = new NoteAdapter(new NoteAdapter.Listener() {
+        toolbar = findViewById(R.id.toolbar);
+        nav = findViewById(R.id.bottom_nav);
+        pager = findViewById(R.id.view_pager);
+
+        pager.setAdapter(new FragmentStateAdapter(this) {
+            @NonNull
             @Override
-            public void onClick(Note note) {
-                open(note);
+            public Fragment createFragment(int position) {
+                if (position == PAGE_SETTINGS) return new SettingsFragment();
+                homeFragment = new HomeFragment();
+                return homeFragment;
             }
 
             @Override
-            public void onLongClick(Note note) {
-                showItemMenu(note);
+            public int getItemCount() {
+                return 2;
             }
+        });
+        pager.setOffscreenPageLimit(1);
 
+        nav.setOnItemSelectedListener(item -> {
+            int target = item.getItemId() == R.id.action_nav_settings ? PAGE_SETTINGS : PAGE_HOME;
+            if (pager.getCurrentItem() != target) pager.setCurrentItem(target, true);
+            return true;
+        });
+
+        pager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
             @Override
-            public void onSelectionChanged(int count) {
-                updateSelectTitle();
+            public void onPageSelected(int position) {
+                int id = position == PAGE_SETTINGS ? R.id.action_nav_settings : R.id.action_nav_home;
+                if (nav.getSelectedItemId() != id) nav.setSelectedItemId(id);
+                updateToolbar(position);
             }
         });
-        recycler.setAdapter(adapter);
-        applyLayoutMode();
-        attachPull(findViewById(R.id.recycler));
-        attachPull(findViewById(R.id.root));
-
-        FloatingActionButton fab = findViewById(R.id.fab);
-        fab.setOnClickListener(v -> new MaterialAlertDialogBuilder(this)
-                .setTitle("新建笔记")
-                .setItems(new String[]{"普通笔记", "思维笔记"}, (d, which) -> {
-                    Note n = new Note();
-                    n.type = which == 1 ? 1 : 0;
-                    n.content = which == 1 ? MindNode.miroTemplate() : "";
-                    store.put(n);
-                    open(n);
-                })
-                .show());
+        updateToolbar(pager.getCurrentItem());
+        deliverOpenIntent(getIntent());
     }
 
-    /** 在主列表顶部向下拖超过阈值 → 进入隐私笔记 */
-    private void attachPull(View v) {
-        if (v == null) return;
-        final int threshold = (int) (PULL_THRESHOLD_DP * getResources().getDisplayMetrics().density);
-        v.setOnTouchListener((view, e) -> {
-            switch (e.getActionMasked()) {
-                case android.view.MotionEvent.ACTION_DOWN:
-                    pullDownY = e.getY();
-                    pullFromTop = !recycler.canScrollVertically(-1);
-                    break;
-                case android.view.MotionEvent.ACTION_UP:
-                    if (pullFromTop && e.getY() - pullDownY > threshold) {
-                        pullFromTop = false;
-                        startActivity(new Intent(this, PrivateNotesActivity.class));
-                    }
-                    break;
-                case android.view.MotionEvent.ACTION_CANCEL:
-                    pullFromTop = false;
-                    break;
-                default:
-                    break;
-            }
-            return false;
-        });
-    }
-    private void toggleGrid() {
-        boolean grid = !UiPrefs.isGridMode(this);
-        UiPrefs.setGridMode(this, grid);
-        applyLayoutMode();
-        Toast.makeText(this, grid ? "已切换为宫格模式" : "已切换为列表模式", Toast.LENGTH_SHORT).show();
-    }
 
-    private void applyLayoutMode() {
-        boolean grid = UiPrefs.isGridMode(this);
-        adapter.setGrid(grid);
-        recycler.setLayoutManager(grid
-                ? new GridLayoutManager(this, 2)
-                : new LinearLayoutManager(this));
-    }
-
-    private void open(Note note) {
-        Intent i = new Intent(this, note.type == 1 ? MindActivity.class : NoteEditActivity.class);
-        i.putExtra("note_id", note.id);
-        startActivity(i);
-    }
-
-    private void showItemMenu(Note note) {
-        new MaterialAlertDialogBuilder(this)
-                .setTitle(note.title == null || note.title.trim().isEmpty() ? "无标题" : note.title)
-                .setItems(new String[]{"重命名", "设为隐私笔记", "分享图片", "删除", "多选"}, (d, which) -> {
-                    if (which == 0) {
-                        android.widget.EditText et = new android.widget.EditText(this);
-                        et.setText(note.title);
-                        int pad = (int) (20 * getResources().getDisplayMetrics().density);
-                        et.setPadding(pad, pad, pad, pad);
-                        new MaterialAlertDialogBuilder(this)
-                                .setTitle("重命名")
-                                .setView(et)
-                                .setPositiveButton("确定", (dd, w) -> {
-                                    note.title = et.getText().toString().trim();
-                                    note.updatedAt = System.currentTimeMillis();
-                                    store.put(note);
-                                    reload();
-                                })
-                                .setNegativeButton("取消", null)
-                                .show();
-                    } else if (which == 1) {
-                        store.setPrivate(note.id, true);
-                        reload();
-                        Toast.makeText(this, "已设为隐私笔记，主页下拉可进入", Toast.LENGTH_LONG).show();
-                    } else if (which == 2) {
-                        ShareUtils.shareAsImage(this, note);
-                    } else if (which == 3) {
-                        new MaterialAlertDialogBuilder(this)
-                                .setMessage("删除这条笔记？将移入回收站，10 天后自动销毁。")
-                                .setPositiveButton("删除", (dd, w) -> {
-                                    store.moveToTrash(note.id);
-                                    reload();
-                                    Toast.makeText(this, "已移入回收站", Toast.LENGTH_SHORT).show();
-                                })
-                                .setNegativeButton("取消", null)
-                                .show();
-                    } else {
-                        enterSelection();
-                        adapter.toggleSelection(note);
-                    }
-                })
-                .show();
-    }
-
-    // ================= 多选 =================
-
-    private boolean handleSelectAction(int id) {
-        if (id == R.id.action_select) {
-            enterSelection();
-            return true;
-        }
-        if (id == R.id.action_select_all) {
-            if (adapter.selectedCount() >= adapter.getItemCount()) adapter.clearSelection();
-            else adapter.selectAll();
-            return true;
-        }
-        if (id == R.id.action_sel_cancel) {
-            exitSelection();
-            return true;
-        }
-        if (id == R.id.action_sel_private) {
-            batchSetPrivate();
-            return true;
-        }
-        if (id == R.id.action_sel_delete) {
-            batchDelete();
-            return true;
-        }
-        return false;
-    }
-
-    private void enterSelection() {
-        selecting = true;
-        adapter.setSelectionMode(true);
-        refreshSelectMenu();
-    }
-
-    private void exitSelection() {
-        selecting = false;
-        adapter.setSelectionMode(false);
-        refreshSelectMenu();
-    }
-
-    private void refreshSelectMenu() {
-        MaterialToolbar tb = findViewById(R.id.toolbar);
-        tb.getMenu().clear();
-        tb.inflateMenu(selecting ? R.menu.menu_select : R.menu.menu_main);
-        if (selecting) {
-            tb.getMenu().findItem(R.id.action_sel_normal).setVisible(false);
-            tb.getMenu().findItem(R.id.action_select).setVisible(false);
-            updateSelectTitle();
+    private void updateToolbar(int position) {
+        if (position == PAGE_SETTINGS) {
+            toolbar.getMenu().clear();
+            toolbar.setTitle(R.string.settings);
+            if (nav != null) nav.setVisibility(View.VISIBLE);
+        } else if (homeFragment != null && homeFragment.isAdded()) {
+            homeFragment.applyToolbar();
         } else {
-            tb.setTitle(R.string.app_name);
+            toolbar.getMenu().clear();
+            toolbar.inflateMenu(R.menu.menu_main);
+            toolbar.setTitle(R.string.app_name);
         }
-        BottomNavigationView nav = findViewById(R.id.bottom_nav);
-        if (nav != null) nav.setVisibility(selecting ? View.GONE : View.VISIBLE);
     }
 
-    private void updateSelectTitle() {
-        if (!selecting) return;
-        MaterialToolbar tb = findViewById(R.id.toolbar);
-        tb.setTitle("已选 " + adapter.selectedCount() + " 项");
-    }
-
-    private void batchSetPrivate() {
-        final List<String> ids = adapter.selectedIds();
-        if (ids.isEmpty()) {
-            Toast.makeText(this, "请先选择笔记", Toast.LENGTH_SHORT).show();
-            return;
+    /** 把外部打开的文件转交给主页 */
+    private void deliverOpenIntent(Intent intent) {
+        if (!MoriImporter.isOpenFileIntent(intent)) return;
+        Uri uri = MoriImporter.uriFromIntent(intent);
+        if (uri == null) return;
+        if (homeFragment != null && homeFragment.isAdded()) {
+            homeFragment.handleOpenUri(uri);
+        } else {
+            pendingUri = uri;
         }
-        new MaterialAlertDialogBuilder(this)
-                .setMessage("把选中的 " + ids.size() + " 条笔记设为隐私笔记？它们将从主页消失，下拉进入隐私笔记查看。")
-                .setPositiveButton("确定", (d, w) -> {
-                    int n = store.setPrivateBatch(ids, true);
-                    exitSelection();
-                    reload();
-                    Toast.makeText(this, "已设为隐私笔记 " + n + " 条", Toast.LENGTH_SHORT).show();
-                })
-                .setNegativeButton("取消", null)
-                .show();
     }
 
-    private void batchDelete() {
-        final List<String> ids = adapter.selectedIds();
-        if (ids.isEmpty()) {
-            Toast.makeText(this, "请先选择笔记", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        new MaterialAlertDialogBuilder(this)
-                .setMessage("删除选中的 " + ids.size() + " 条笔记？将移入回收站，10 天后自动销毁。")
-                .setPositiveButton("删除", (d, w) -> {
-                    int n = store.moveToTrashBatch(ids);
-                    exitSelection();
-                    reload();
-                    Toast.makeText(this, "已移入回收站 " + n + " 条", Toast.LENGTH_SHORT).show();
-                })
-                .setNegativeButton("取消", null)
-                .show();
-    }
-
-    @Override
-    public void onBackPressed() {
-        if (selecting) {
-            exitSelection();
-            return;
-        }
-        super.onBackPressed();
-    }
-
-    private void reload() {
-        List<Note> notes = store.getNotes();
-        adapter.setData(notes);
-        emptyView.setVisibility(notes.isEmpty() ? View.VISIBLE : View.GONE);
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        reload();
-        applyLayoutMode();
-        handleOpenIntent(getIntent());
+    /** 供主页取走尚未处理的外部文件 Uri */
+    public Uri consumePendingUri() {
+        Uri u = pendingUri;
+        pendingUri = null;
+        return u;
     }
 
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
-        handleOpenIntent(intent);
+        if (MoriImporter.isOpenFileIntent(intent) && pager.getCurrentItem() != PAGE_HOME) {
+            pager.setCurrentItem(PAGE_HOME, false);
+        }
+        deliverOpenIntent(intent);
     }
 
-    /** 处理「用本软件打开 .mori 文件」 */
-    private void handleOpenIntent(Intent intent) {
-        if (!MoriImporter.isOpenFileIntent(intent)) return;
-        Uri uri = MoriImporter.uriFromIntent(intent);
-        if (uri == null) return;
-        if (uri.equals(lastOpenedUri)) return;
-        lastOpenedUri = uri;
-        MoriImporter.handle(this, uri, this::reload);
+    @Override
+    public void onBackPressed() {
+        if (homeFragment != null && homeFragment.handleBack()) return;
+        if (pager.getCurrentItem() != PAGE_HOME) {
+            pager.setCurrentItem(PAGE_HOME, true);
+            return;
+        }
+        super.onBackPressed();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (homeFragment != null && homeFragment.isAdded()) homeFragment.applyToolbar();
+    }
+
+    /** 主页隐藏/显示底部导航（多选时隐藏） */
+    public void setBottomNavVisible(boolean visible) {
+        if (nav == null) return;
+        nav.setVisibility(visible ? View.VISIBLE : View.GONE);
     }
 }

@@ -9,4 +9,8 @@
         android:id="@+id/action_select"
         android:title="多选"
         app:showAsAction="never" />
+    <item
+        android:id="@+id/action_trash"
+        android:title="回收站"
+        app:showAsAction="never" />
 </menu>
