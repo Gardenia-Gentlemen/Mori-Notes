@@ -11,11 +11,16 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
-/** 通过 SAF 在用户选择的目录里读写笔记文件 */
+/** 通过 SAF 在用户选择的目录里读写数据文件 */
 public class StoreFile {
     public static final String NAME = "notes.json";
+    public static final String NAME_TODO = "todos.json";
 
     public static Uri find(Context c, Uri tree) {
+        return find(c, tree, NAME);
+    }
+
+    public static Uri find(Context c, Uri tree, String name) {
         try {
             Uri children = DocumentsContract.buildChildDocumentsUriUsingTree(
                     tree, DocumentsContract.getTreeDocumentId(tree));
@@ -25,7 +30,7 @@ public class StoreFile {
             if (cur != null) {
                 try {
                     while (cur.moveToNext()) {
-                        if (NAME.equals(cur.getString(1))) {
+                        if (name.equals(cur.getString(1))) {
                             return DocumentsContract.buildDocumentUriUsingTree(tree, cur.getString(0));
                         }
                     }
@@ -40,7 +45,11 @@ public class StoreFile {
 
     /** 不存在则返回 null */
     public static String read(Context c, Uri tree) throws IOException {
-        Uri doc = find(c, tree);
+        return read(c, tree, NAME);
+    }
+
+    public static String read(Context c, Uri tree, String name) throws IOException {
+        Uri doc = find(c, tree, name);
         if (doc == null) return null;
         try (InputStream in = c.getContentResolver().openInputStream(doc)) {
             if (in == null) return null;
@@ -53,15 +62,19 @@ public class StoreFile {
     }
 
     public static void write(Context c, Uri tree, String data) throws IOException {
-        Uri doc = find(c, tree);
+        write(c, tree, NAME, data);
+    }
+
+    public static void write(Context c, Uri tree, String name, String data) throws IOException {
+        Uri doc = find(c, tree, name);
         if (doc == null) {
             Uri parent = DocumentsContract.buildDocumentUriUsingTree(
                     tree, DocumentsContract.getTreeDocumentId(tree));
-            doc = DocumentsContract.createDocument(c.getContentResolver(), parent, "application/json", NAME);
+            doc = DocumentsContract.createDocument(c.getContentResolver(), parent, "application/json", name);
         }
-        if (doc == null) throw new IOException("无法创建 " + NAME);
+        if (doc == null) throw new IOException("无法创建 " + name);
         try (OutputStream out = c.getContentResolver().openOutputStream(doc, "wt")) {
-            if (out == null) throw new IOException("无法写入 " + NAME);
+            if (out == null) throw new IOException("无法写入 " + name);
             out.write(data.getBytes(StandardCharsets.UTF_8));
         }
     }

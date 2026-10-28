@@ -14,18 +14,19 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 /**
- * 主页 / 设置 共用一个 ViewPager2，跟手真实滑动，底部导航双向联动。
- * 回收站仍为独立页面，入口在顶栏菜单。
+ * 主页 / 待办 共用一个 ViewPager2，跟手真实滑动，底部导航双向联动。
+ * 设置已从底栏移出，入口在主页顶栏菜单；回收站入口同在顶栏菜单。
  */
 public class MainActivity extends BaseActivity {
 
     private static final int PAGE_HOME = 0;
-    private static final int PAGE_SETTINGS = 1;
+    private static final int PAGE_TODO = 1;
 
     private ViewPager2 pager;
     private BottomNavigationView nav;
     private MaterialToolbar toolbar;
     private HomeFragment homeFragment;
+    private TodoFragment todoFragment;
     /** 尚未交付给主页的外部 .mori 文件 Uri */
     private Uri pendingUri;
 
@@ -41,7 +42,10 @@ public class MainActivity extends BaseActivity {
             @NonNull
             @Override
             public Fragment createFragment(int position) {
-                if (position == PAGE_SETTINGS) return new SettingsFragment();
+                if (position == PAGE_TODO) {
+                    todoFragment = new TodoFragment();
+                    return todoFragment;
+                }
                 homeFragment = new HomeFragment();
                 return homeFragment;
             }
@@ -54,7 +58,7 @@ public class MainActivity extends BaseActivity {
         pager.setOffscreenPageLimit(1);
 
         nav.setOnItemSelectedListener(item -> {
-            int target = item.getItemId() == R.id.action_nav_settings ? PAGE_SETTINGS : PAGE_HOME;
+            int target = item.getItemId() == R.id.action_nav_todo ? PAGE_TODO : PAGE_HOME;
             if (pager.getCurrentItem() != target) pager.setCurrentItem(target, true);
             return true;
         });
@@ -62,7 +66,7 @@ public class MainActivity extends BaseActivity {
         pager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
             @Override
             public void onPageSelected(int position) {
-                int id = position == PAGE_SETTINGS ? R.id.action_nav_settings : R.id.action_nav_home;
+                int id = position == PAGE_TODO ? R.id.action_nav_todo : R.id.action_nav_home;
                 if (nav.getSelectedItemId() != id) nav.setSelectedItemId(id);
                 updateToolbar(position);
             }
@@ -73,10 +77,15 @@ public class MainActivity extends BaseActivity {
 
 
     private void updateToolbar(int position) {
-        if (position == PAGE_SETTINGS) {
-            toolbar.getMenu().clear();
-            toolbar.setTitle(R.string.settings);
+        if (position == PAGE_TODO) {
             if (nav != null) nav.setVisibility(View.VISIBLE);
+            if (todoFragment != null && todoFragment.isAdded()) {
+                todoFragment.applyToolbar();
+            } else {
+                toolbar.getMenu().clear();
+                toolbar.inflateMenu(R.menu.menu_todo);
+                toolbar.setTitle("待办");
+            }
         } else if (homeFragment != null && homeFragment.isAdded()) {
             homeFragment.applyToolbar();
         } else {

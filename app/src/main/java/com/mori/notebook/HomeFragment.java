@@ -105,6 +105,10 @@ public class HomeFragment extends Fragment {
                 startActivity(new Intent(requireContext(), TrashActivity.class));
                 return true;
             }
+            if (item.getItemId() == R.id.action_settings) {
+                startActivity(new Intent(requireContext(), SettingsActivity.class));
+                return true;
+            }
             return handleSelectAction(item.getItemId());
         });
         if (selecting) {

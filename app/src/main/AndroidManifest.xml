@@ -75,6 +75,12 @@
         <activity
             android:name=".PrivateNotesActivity"
             android:parentActivityName=".MainActivity" />
+        <activity
+            android:name=".TodoEditActivity"
+            android:parentActivityName=".MainActivity" />
+        <activity
+            android:name=".SettingsActivity"
+            android:parentActivityName=".MainActivity" />
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
