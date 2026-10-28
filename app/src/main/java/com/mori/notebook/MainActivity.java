@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
@@ -43,15 +44,17 @@ public class MainActivity extends BaseActivity {
                 toggleGrid();
                 return true;
             }
-            if (item.getItemId() == R.id.action_settings) {
-                startActivity(new Intent(this, SettingsActivity.class));
-                return true;
-            }
-            if (item.getItemId() == R.id.action_trash) {
-                startActivity(new Intent(this, TrashActivity.class));
-                return true;
-            }
             return handleSelectAction(item.getItemId());
+        });
+        BottomNavigationView bottomNav = findViewById(R.id.bottom_nav);
+        bottomNav.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.action_nav_trash) {
+                openFromBottom(bottomNav, new Intent(this, TrashActivity.class));
+            } else if (id == R.id.action_nav_settings) {
+                openFromBottom(bottomNav, new Intent(this, SettingsActivity.class));
+            }
+            return true;
         });
         recycler = findViewById(R.id.recycler);
         emptyView = findViewById(R.id.tv_empty);
@@ -212,6 +215,11 @@ public class MainActivity extends BaseActivity {
         refreshSelectMenu();
     }
 
+    /** 底部导航打开其它页面，并让「主页」保持选中 */
+    private void openFromBottom(BottomNavigationView nav, Intent intent) {
+        startActivity(intent);
+        nav.post(() -> nav.setSelectedItemId(R.id.action_nav_home));
+    }
     private void exitSelection() {
         selecting = false;
         adapter.setSelectionMode(false);
@@ -229,6 +237,8 @@ public class MainActivity extends BaseActivity {
         } else {
             tb.setTitle(R.string.app_name);
         }
+        BottomNavigationView nav = findViewById(R.id.bottom_nav);
+        if (nav != null) nav.setVisibility(selecting ? View.GONE : View.VISIBLE);
     }
 
     private void updateSelectTitle() {
