@@ -40,6 +40,20 @@
                 <data android:mimeType="application/octet-stream" />
                 <data android:mimeType="application/x-mori" />
             </intent-filter>
+            <!-- .mori 也按文本类型可打开 -->
+            <intent-filter android:label="用 Mori Notes 打开">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" android:mimeType="text/plain" />
+                <data android:scheme="file" android:mimeType="text/plain" />
+            </intent-filter>
+            <intent-filter android:label="用 Mori Notes 打开">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" android:mimeType="text/*" />
+                <data android:scheme="file" android:mimeType="text/*" />
+                <data android:pathPattern=".*\\.mori" />
+            </intent-filter>
             <!-- 分享文件到本软件 -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
