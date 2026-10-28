@@ -263,7 +263,7 @@ def main():
         sys.exit("建 Release 失败 %s: %s" % (st, rel.get("message")))
     print("release v%s OK" % v)
 
-    assets = [(apk, "notebook-v%s.apk" % v, "成品包")]
+    assets = [(apk, "notebook-v%s.apk" % v, "")]
     if prev_zip:
         assets.append((prev_zip, "notebook-v%s-src.zip" % prev, "源代码 (v%s)" % prev))
     up = rel["upload_url"].split("{")[0]
