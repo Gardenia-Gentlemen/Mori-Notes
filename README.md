@@ -47,3 +47,7 @@ gradle assembleRelease
 个人使用，不发布到应用商店，不提供 Issues 支持。
 
 每个版本目录包含：`*.apk`（该版正式包）与 `src/`（该版源码）。v1.3 的 `src/` 是完整可编译工程；历史版本的原始工程已被覆盖，其 `src/` 为 APK 反编译代码，仅供查看，详见各目录 `SOURCE.md`。
+
+## Releases
+
+每个版本都在 [Releases](https://github.com/Gardenia-Gentlemen/notebook/releases) 有对应标签，附件：成品包 `notebook-vX.apk`、源代码 `notebook-vX-src.zip`，说明为该版本更新日志。
