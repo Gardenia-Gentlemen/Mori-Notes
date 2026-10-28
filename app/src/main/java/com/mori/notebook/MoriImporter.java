@@ -53,9 +53,10 @@ public final class MoriImporter {
     public static void handle(Activity act, Uri uri, Callback cb) {
         if (act == null || uri == null) return;
         String name = displayName(act, uri);
-        if (name != null && !name.isEmpty()
-                && !name.toLowerCase(java.util.Locale.US).endsWith(MoriFile.EXT)) {
-            Toast.makeText(act, "只能打开 .mori 后缀的文件", Toast.LENGTH_SHORT).show();
+        // 导入严格限定 .mori：无文件名或后缀不符一律拒绝
+        if (name == null || name.isEmpty()
+                || !name.toLowerCase(java.util.Locale.US).endsWith(MoriFile.EXT)) {
+            Toast.makeText(act, "仅支持导入 .mori 文件", Toast.LENGTH_SHORT).show();
             return;
         }
         String text;

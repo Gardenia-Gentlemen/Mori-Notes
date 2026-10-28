@@ -406,7 +406,7 @@ public class SettingsActivity extends BaseActivity {
 
     private void startImportMori() {
         try {
-            importLauncher.launch(new String[]{"*/*"});
+            importLauncher.launch(new String[]{"application/octet-stream", "application/x-mori", "text/plain", "text/*"});
         } catch (Exception e) {
             toast("无法打开文件选择器");
         }
