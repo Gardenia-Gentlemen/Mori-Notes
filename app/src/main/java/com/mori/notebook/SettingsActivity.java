@@ -51,7 +51,7 @@ public class SettingsActivity extends BaseActivity {
                     if (uri != null) doImportMori(uri);
                 });
         exportLauncher = registerForActivityResult(
-                new ActivityResultContracts.CreateDocument("text/plain"),
+                new ActivityResultContracts.CreateDocument("application/octet-stream"),
                 uri -> {
                     byte[] data = pendingExportBytes;
                     int count = pendingExportCount;
@@ -395,7 +395,7 @@ public class SettingsActivity extends BaseActivity {
                 exportLauncher.launch(name);
             } catch (Exception noPicker) {
                 String path = ExportUtils.saveBytes(this, name,
-                        "text/plain", data);
+                        "application/octet-stream", data);
                 pendingExportBytes = null;
                 toast("已导出 " + list.size() + " 条笔记到 " + path);
             }
