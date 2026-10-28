@@ -51,3 +51,18 @@ gradle assembleRelease
 ## Releases
 
 每个版本都在 [Releases](https://github.com/Gardenia-Gentlemen/notebook/releases) 有对应标签，附件：成品包 `notebook-vX.apk`、源代码 `notebook-vX-src.zip`，说明为该版本更新日志。
+
+## 发版
+
+每次出包只跑一条命令，自动完成：构建 → 归档源码快照 `releases/v<新>/src` →
+提交推送 → 建 Release（附件 = 成品包 + **上一版本**的源代码）→ 正文取自 CHANGELOG。
+
+```bash
+export GH_TOKEN=ghp_xxx          # classic PAT，需 repo 权限（勿提交入库）
+python3 tools/release.py 1.4 --build   # 构建并发布
+python3 tools/release.py 1.4           # 用已有 app/build/outputs/apk/release/*.apk
+python3 tools/release.py 1.4 --dry-run # 只看计划，不动远端
+```
+
+发版前先在 `CHANGELOG.md` 顶部加一节 `## 1.4 (11)`，并把 `app/build.gradle` 的
+`versionName`/`versionCode` 改成一致；脚本会拿这一节当 Release 正文。
