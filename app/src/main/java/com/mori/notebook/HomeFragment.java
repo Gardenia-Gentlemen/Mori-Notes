@@ -67,6 +67,11 @@ public class HomeFragment extends Fragment {
             public void onSelectionChanged(int count) {
                 updateSelectTitle();
             }
+
+            @Override
+            public void onSelectionLongClick() {
+                showSelectionMenu();
+            }
         });
         recycler.setAdapter(adapter);
         applyLayoutMode();
@@ -241,6 +246,10 @@ public class HomeFragment extends Fragment {
             batchSetPrivate();
             return true;
         }
+        if (id == R.id.action_sel_share) {
+            batchShare();
+            return true;
+        }
         if (id == R.id.action_sel_delete) {
             batchDelete();
             return true;
@@ -264,6 +273,31 @@ public class HomeFragment extends Fragment {
         if (!selecting || !isAdded()) return;
         MaterialToolbar tb = requireActivity().findViewById(R.id.toolbar);
         if (tb != null) tb.setTitle("已选 " + adapter.selectedCount() + " 项");
+    }
+
+    /** 多选态长按：分享 / 删除 */
+    private void showSelectionMenu() {
+        if (adapter.selectedCount() == 0) {
+            return;
+        }
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle("已选 " + adapter.selectedCount() + " 项")
+                .setItems(new String[]{"分享为图片", "删除所选"}, (d, which) -> {
+                    if (which == 0) batchShare();
+                    else batchDelete();
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
+    private void batchShare() {
+        final List<Note> notes = adapter.selectedNotes();
+        if (notes == null || notes.isEmpty()) {
+            toast("请先选择笔记");
+            return;
+        }
+        ShareUtils.shareNotesAsImage(requireContext(), notes);
+        exitSelection();
     }
 
     private void batchSetPrivate() {

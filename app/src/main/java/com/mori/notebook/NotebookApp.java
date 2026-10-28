@@ -11,6 +11,7 @@ public class NotebookApp extends Application {
     public void onCreate() {
         super.onCreate();
         applyTheme(this);
+        CountdownTime.setDayStartHour(CountdownPrefs.getDayStartHour(this));
     }
 
     public static void applyTheme(Context c) {

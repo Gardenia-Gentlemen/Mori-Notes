@@ -20,6 +20,10 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.VH> {
 
         void onLongClick(Note note);
 
+        /** 多选态下长按：弹分享/删除菜单 */
+        default void onSelectionLongClick() {
+        }
+
         /** 多选数量变化（默认空实现，旧调用方无需改动） */
         default void onSelectionChanged(int count) {
         }
@@ -147,7 +151,8 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.VH> {
         });
         h.itemView.setOnLongClickListener(v -> {
             if (selectionMode) {
-                toggleSelection(n);
+                if (!selectedIds.contains(n.id)) toggleSelection(n);
+                listener.onSelectionLongClick();
             } else {
                 listener.onLongClick(n);
             }

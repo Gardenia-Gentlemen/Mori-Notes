@@ -5,4 +5,8 @@
         android:id="@+id/action_clear_done"
         android:title="清除已完成"
         app:showAsAction="never" />
+    <item
+        android:id="@+id/action_settings"
+        android:title="设置"
+        app:showAsAction="never" />
 </menu>

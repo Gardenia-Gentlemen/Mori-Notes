@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_select_all"
+        android:title="全选"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_sel_share"
+        android:title="分享所选"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_sel_delete"
+        android:title="删除所选"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_sel_cancel"
+        android:title="退出多选"
+        app:showAsAction="never" />
+</menu>

@@ -15,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 public class StoreFile {
     public static final String NAME = "notes.json";
     public static final String NAME_TODO = "todos.json";
+    public static final String NAME_COUNTDOWN = "countdowns.json";
 
     public static Uri find(Context c, Uri tree) {
         return find(c, tree, NAME);

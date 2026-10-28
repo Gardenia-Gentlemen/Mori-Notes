@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+
+    <application
+        android:name=".NotebookApp"
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Notebook">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- 用本软件打开 .mori 备份文件（按扩展名匹配） -->
+            <intent-filter android:label="用 Mori Notes 打开">
+                <action android:name="android.intent.action.VIEW" />
+                <action android:name="android.intent.action.FILE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" android:host="*" android:pathPattern=".*\\.mori" />
+                <data android:scheme="content" android:host="*" android:pathPattern=".*\\..*\\.mori" />
+                <data android:scheme="file" android:host="*" android:pathPattern=".*\\.mori" />
+                <data android:scheme="file" android:host="*" android:pathPattern=".*\\..*\\.mori" />
+            </intent-filter>
+            <!-- 部分文件管理器只按 MIME 分发 -->
+            <intent-filter android:label="用 Mori Notes 打开">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:mimeType="application/octet-stream" />
+                <data android:mimeType="application/x-mori" />
+            </intent-filter>
+            <!-- .mori 也按文本类型可打开 -->
+            <intent-filter android:label="用 Mori Notes 打开">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" android:mimeType="text/plain" />
+                <data android:scheme="file" android:mimeType="text/plain" />
+            </intent-filter>
+            <intent-filter android:label="用 Mori Notes 打开">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" android:mimeType="text/*" />
+                <data android:scheme="file" android:mimeType="text/*" />
+                <data android:pathPattern=".*\\.mori" />
+            </intent-filter>
+            <!-- 分享文件到本软件 -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".NoteEditActivity"
+            android:parentActivityName=".MainActivity" />
+
+        <activity
+            android:name=".MindActivity"
+            android:parentActivityName=".MainActivity" />
+        <activity
+            android:name=".TrashActivity"
+            android:parentActivityName=".MainActivity" />
+        <activity
+            android:name=".PrivateNotesActivity"
+            android:parentActivityName=".MainActivity" />
+        <activity
+            android:name=".TodoEditActivity"
+            android:parentActivityName=".MainActivity" />
+        <activity
+            android:name=".CountdownTimelineActivity"
+            android:parentActivityName=".MainActivity" />
+        <activity
+            android:name=".CountdownEditActivity"
+            android:parentActivityName=".MainActivity" />
+        <activity
+            android:name=".CountdownFullScreenActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:parentActivityName=".MainActivity"
+            android:theme="@style/Theme.Notebook" />
+        <activity
+            android:name=".SettingsActivity"
+            android:parentActivityName=".MainActivity" />
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+    </application>
+</manifest>

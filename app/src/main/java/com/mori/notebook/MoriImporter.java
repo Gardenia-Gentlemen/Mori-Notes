@@ -101,14 +101,16 @@ public final class MoriImporter {
     }
 
     private static void finish(Activity act, String text, String pin, Callback cb) {
-        int added = 0;
         try {
             MoriFile.Package pkg = MoriFile.parse(text, pin);
-            if (pkg.notes.isEmpty()) {
-                Toast.makeText(act, "文件中没有笔记", Toast.LENGTH_SHORT).show();
+            if (pkg.total() == 0) {
+                Toast.makeText(act, "文件中没有可导入的内容", Toast.LENGTH_SHORT).show();
             } else {
-                added = NoteStore.get(act).importNotes(pkg.notes);
-                Toast.makeText(act, "已导入 " + added + " 条笔记", Toast.LENGTH_SHORT).show();
+                int noteCount = NoteStore.get(act).importNotes(pkg.notes);
+                int cdCount = importCountdowns(act, pkg.countdowns);
+                int todoCount = importTodos(act, pkg.todos);
+                Toast.makeText(act, "已导入：" + summary(noteCount, cdCount, todoCount),
+                        Toast.LENGTH_LONG).show();
             }
         } catch (MoriFile.BadPasswordException e) {
             Toast.makeText(act, "密码错误，无法解密", Toast.LENGTH_SHORT).show();
@@ -116,6 +118,56 @@ public final class MoriImporter {
             Toast.makeText(act, "导入失败：" + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
         if (cb != null) cb.onFinished();
+    }
+
+    /** 导入倒数日，id 冲突时重新生成，避免覆盖已有记录 */
+    private static int importCountdowns(Activity act, java.util.List<Countdown> list) {
+        if (list == null || list.isEmpty()) return 0;
+        CountdownStore store = CountdownStore.get(act);
+        store.reload();
+        int added = 0;
+        for (Countdown c : list) {
+            if (c == null) continue;
+            if (c.id == null || c.id.trim().isEmpty() || store.find(c.id) != null) {
+                c.id = java.util.UUID.randomUUID().toString();
+            }
+            store.put(c);
+            added++;
+        }
+        return added;
+    }
+
+    /** 导入待办，id 冲突时重新生成 */
+    private static int importTodos(Activity act, java.util.List<Todo> list) {
+        if (list == null || list.isEmpty()) return 0;
+        TodoStore store = TodoStore.get(act);
+        store.reload();
+        int added = 0;
+        for (Todo t : list) {
+            if (t == null) continue;
+            if (t.id == null || t.id.trim().isEmpty() || store.find(t.id) != null) {
+                t.id = java.util.UUID.randomUUID().toString();
+            }
+            store.put(t);
+            added++;
+        }
+        return added;
+    }
+
+    /** 拼接导入结果文案，跳过 0 项 */
+    private static String summary(int notes, int countdowns, int todos) {
+        StringBuilder sb = new StringBuilder();
+        if (notes > 0) sb.append(notes).append(" 条笔记");
+        if (countdowns > 0) {
+            if (sb.length() > 0) sb.append("、");
+            sb.append(countdowns).append(" 个倒数日");
+        }
+        if (todos > 0) {
+            if (sb.length() > 0) sb.append("、");
+            sb.append(todos).append(" 条待办");
+        }
+        if (sb.length() == 0) return "没有内容";
+        return sb.toString();
     }
 
     private static String displayName(Activity act, Uri uri) {

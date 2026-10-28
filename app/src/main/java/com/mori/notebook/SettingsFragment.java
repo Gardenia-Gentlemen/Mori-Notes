@@ -16,6 +16,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.slider.Slider;
@@ -26,6 +27,7 @@ public class SettingsFragment extends Fragment {
     private TextView tvBgName;
     private TextView tvPrivacyState;
 
+    private ActivityResultLauncher<String[]> cardBgLauncher;
     private ActivityResultLauncher<Intent> deviceLauncher;
     private ActivityResultLauncher<Uri> folderPicker;
     private ActivityResultLauncher<Intent> authLauncher;
@@ -36,6 +38,7 @@ public class SettingsFragment extends Fragment {
     private ActivityResultLauncher<String> exportLauncher;
     private byte[] pendingExportBytes;
     private int pendingExportCount;
+    private String pendingExportLabel = "";
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -57,6 +60,23 @@ public class SettingsFragment extends Fragment {
                     if (uri != null) doImportMori(uri);
                 });
 
+        cardBgLauncher = registerForActivityResult(
+                new ActivityResultContracts.OpenDocument(), uri -> {
+                    if (uri == null) {
+                        return;
+                    }
+                    try {
+                        requireContext().getContentResolver().takePersistableUriPermission(uri,
+                                Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    } catch (Exception ignored) {
+                    }
+                    CountdownPrefs.setCardBg(requireContext(), uri);
+                    CardBg.clear();
+                    if (getView() != null) {
+                        bindCountdownCard(getView());
+                    }
+                    toast("已设置卡片背景图");
+                });
         exportLauncher = registerForActivityResult(
                 new ActivityResultContracts.CreateDocument("application/octet-stream"),
                 uri -> {
@@ -69,7 +89,7 @@ public class SettingsFragment extends Fragment {
                     }
                     try {
                         ExportUtils.writeBytes(requireContext(), uri, data);
-                        toast("已导出 " + count + " 条笔记到所选位置");
+                        toast("已导出 " + pendingExportLabel + " 到所选位置");
                     } catch (Exception e) {
                         toast("写入失败：" + e.getMessage());
                     }
@@ -109,6 +129,7 @@ public class SettingsFragment extends Fragment {
     public void onViewCreated(@NonNull View v, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(v, savedInstanceState);
 
+        bindCountdownCard(v);
         RadioGroup rg = v.findViewById(R.id.rg_theme);
         int mode = UiPrefs.getThemeMode(requireContext());
         rg.check(mode == 1 ? R.id.radio_light : mode == 2 ? R.id.radio_dark : R.id.radio_follow);
@@ -155,6 +176,8 @@ public class SettingsFragment extends Fragment {
         } catch (Exception e) {
             tvVer.setText("版本未知");
         }
+        MaterialButton btnLic = v.findViewById(R.id.btn_licenses);
+        btnLic.setOnClickListener(x -> showOpenSourceLicense());
 
         MaterialButton pick = v.findViewById(R.id.btn_pick_folder);
         pick.setOnClickListener(x -> {
@@ -314,25 +337,61 @@ public class SettingsFragment extends Fragment {
         return box;
     }
 
-    // ================= v1.5 整机笔记导出 / 导入 =================
-
+    // ================= v1.5 整机笔记导出 / 导入（v1.7：可选内容备份） =================
+    /** 勾选要备份的内容 */
+    private static class BackupSel {
+        boolean notes;
+        boolean priv;
+        boolean countdowns;
+        boolean todos;
+        boolean any() {
+            return notes || priv || countdowns || todos;
+        }
+    }
     private void startExportMori() {
-        String[] items = {"仅导出常规笔记", "仅导出隐私笔记", "全部导出"};
+        final BackupSel sel = new BackupSel();
+        android.widget.LinearLayout box = new android.widget.LinearLayout(requireContext());
+        box.setOrientation(android.widget.LinearLayout.VERTICAL);
+        int pad = (int) (20 * getResources().getDisplayMetrics().density);
+        box.setPadding(pad, pad / 2, pad, 0);
+        final android.widget.CheckBox cbNotes = checkBox("常规笔记");
+        final android.widget.CheckBox cbPriv = checkBox("隐私笔记（需验证密码）");
+        final android.widget.CheckBox cbCd = checkBox("倒数日");
+        final android.widget.CheckBox cbTodo = checkBox("待办");
+        cbNotes.setChecked(true);
+        box.addView(cbNotes);
+        box.addView(cbPriv);
+        box.addView(cbCd);
+        box.addView(cbTodo);
         new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
-                .setTitle("整机笔记导出")
-                .setItems(items, (d, which) -> {
-                    if (which == 0) {
-                        askExportPassword(MoriFile.SCOPE_NORMAL);
+                .setTitle("选择要备份的内容")
+                .setView(box)
+                .setPositiveButton("下一步", (d, w) -> {
+                    sel.notes = cbNotes.isChecked();
+                    sel.priv = cbPriv.isChecked();
+                    sel.countdowns = cbCd.isChecked();
+                    sel.todos = cbTodo.isChecked();
+                    if (!sel.any()) {
+                        toast("请至少选择一项内容");
                         return;
                     }
-                    requirePrivacyAuth(() -> askExportPassword(
-                            which == 1 ? MoriFile.SCOPE_PRIVATE : MoriFile.SCOPE_ALL));
+                    if (sel.priv) {
+                        requirePrivacyAuth(() -> askExportPassword(sel));
+                    } else {
+                        askExportPassword(sel);
+                    }
                 })
                 .setNegativeButton("取消", null)
                 .show();
     }
-
-    /** 导出隐私/全部前必须通过隐私密码认证 */
+    private android.widget.CheckBox checkBox(String text) {
+        android.widget.CheckBox cb = new android.widget.CheckBox(requireContext());
+        cb.setText(text);
+        int v = (int) (6 * getResources().getDisplayMetrics().density);
+        cb.setPadding(0, v, 0, v);
+        return cb;
+    }
+    /** 导出隐私笔记前必须通过隐私密码认证 */
     private void requirePrivacyAuth(Runnable next) {
         if (!PrivacyPrefs.isConfigured(requireContext())) {
             toast("请先在本页设置隐私笔记密码");
@@ -356,7 +415,6 @@ public class SettingsFragment extends Fragment {
             askPrivacyPin(next);
         }
     }
-
     private void askPrivacyPin(Runnable next) {
         final android.widget.EditText et = pinInput("隐私笔记密码");
         new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
@@ -372,11 +430,10 @@ public class SettingsFragment extends Fragment {
                 .setNegativeButton("取消", null)
                 .show();
     }
-
-    /** 为导出文件设置 8 位数字密码（仅常规笔记导出时不加密） */
-    private void askExportPassword(String scope) {
-        if (MoriFile.SCOPE_NORMAL.equals(scope)) {
-            doExportMori(scope, null);
+    /** 含隐私笔记时必须为文件设置 8 位数字密码；其余组合明文导出 */
+    private void askExportPassword(BackupSel sel) {
+        if (!sel.priv) {
+            doExportMori(sel, null);
             return;
         }
         final android.widget.EditText p1 = pinInput("8 位数字密码");
@@ -389,7 +446,7 @@ public class SettingsFragment extends Fragment {
         box.addView(p2);
         new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
                 .setTitle("设置文件密码")
-                .setMessage("导出文件将用该密码加密，导入时需要输入")
+                .setMessage("备份含隐私笔记，文件将用该密码加密，导入时需要输入")
                 .setView(box)
                 .setPositiveButton("导出", (d, w) -> {
                     String a = p1.getText().toString().trim();
@@ -402,40 +459,73 @@ public class SettingsFragment extends Fragment {
                         toast("两次输入不一致");
                         return;
                     }
-                    doExportMori(scope, a);
+                    doExportMori(sel, a);
                 })
                 .setNegativeButton("取消", null)
                 .show();
     }
-
-    private void doExportMori(String scope, String pin) {
+    private void doExportMori(BackupSel sel, String pin) {
+        MoriFile.Content content = new MoriFile.Content();
         NoteStore store = NoteStore.get(requireContext());
-        java.util.List<Note> list = store.notesForScope(scope);
-        if (list.isEmpty()) {
-            toast("没有可导出的笔记");
+        if (sel.notes && sel.priv) {
+            content.notes.addAll(store.notesForScope(MoriFile.SCOPE_ALL));
+        } else if (sel.priv) {
+            content.notes.addAll(store.notesForScope(MoriFile.SCOPE_PRIVATE));
+        } else if (sel.notes) {
+            content.notes.addAll(store.notesForScope(MoriFile.SCOPE_NORMAL));
+        }
+        content.includesPrivate = sel.priv;
+        if (sel.countdowns) {
+            CountdownStore cds = CountdownStore.get(requireContext());
+            cds.reload();
+            content.countdowns.addAll(cds.getAll());
+        }
+        if (sel.todos) {
+            TodoStore tds = TodoStore.get(requireContext());
+            tds.reload();
+            content.todos.addAll(tds.getActive());
+            content.todos.addAll(tds.getDone());
+        }
+        if (content.size() == 0) {
+            toast("没有可导出的内容");
             return;
         }
-        boolean enc = !MoriFile.SCOPE_NORMAL.equals(scope);
+        boolean enc = sel.priv;
+        String label = describe(content);
         try {
-            byte[] data = MoriFile.build(list, scope, enc, pin);
+            byte[] data = MoriFile.build(content, MoriFile.SCOPE_CUSTOM, enc, pin);
             String ts = new java.text.SimpleDateFormat("yyyyMMdd-HHmmss",
                     java.util.Locale.US).format(new java.util.Date());
-            String name = "Mori-notes-" + ts + MoriFile.EXT;
+            String name = "Mori-backup-" + ts + MoriFile.EXT;
             pendingExportBytes = data;
-            pendingExportCount = list.size();
+            pendingExportCount = content.size();
+            pendingExportLabel = label;
             try {
                 exportLauncher.launch(name);
             } catch (Exception noPicker) {
                 String path = ExportUtils.saveBytes(requireContext(), name,
                         "application/octet-stream", data);
                 pendingExportBytes = null;
-                toast("已导出 " + list.size() + " 条笔记到 " + path);
+                toast("已导出 " + label + " 到 " + path);
             }
         } catch (Exception e) {
             toast("导出失败：" + e.getMessage());
         }
     }
-
+    /** 备份内容摘要文案 */
+    private static String describe(MoriFile.Content c) {
+        StringBuilder sb = new StringBuilder();
+        if (!c.notes.isEmpty()) sb.append(c.notes.size()).append(" 条笔记");
+        if (!c.countdowns.isEmpty()) {
+            if (sb.length() > 0) sb.append("、");
+            sb.append(c.countdowns.size()).append(" 个倒数日");
+        }
+        if (!c.todos.isEmpty()) {
+            if (sb.length() > 0) sb.append("、");
+            sb.append(c.todos.size()).append(" 条待办");
+        }
+        return sb.toString();
+    }
     private void startImportMori() {
         try {
             importLauncher.launch(new String[]{"application/octet-stream", "application/x-mori", "text/plain", "text/*"});
@@ -456,8 +546,80 @@ public class SettingsFragment extends Fragment {
         tvBgName.setText("当前：" + name);
     }
 
+    private void showOpenSourceLicense() {
+        String text;
+        try {
+            java.io.InputStream in = getResources().openRawResource(R.raw.kipu_trace_license);
+            java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+            byte[] buf = new byte[4096];
+            int n;
+            while ((n = in.read(buf)) > 0) bos.write(buf, 0, n);
+            in.close();
+            text = new String(bos.toByteArray(), "UTF-8");
+        } catch (Exception e) {
+            text = "无法读取许可文本";
+        }
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle("开源许可 · TimeTrace (KIPPU_Trace)")
+                .setMessage(text)
+                .setPositiveButton("关闭", null)
+                .show();
+    }
+
     private String percent(float v) {
         return Math.round(v * 100) + "%";
+    }
+
+    /** 倒数日卡片设置：日切时间 / 背景图 / 蒙版强度 */
+    private void bindCountdownCard(View v) {
+        MaterialButton day = v.findViewById(R.id.btn_day_start);
+        MaterialButton bg = v.findViewById(R.id.btn_card_bg);
+        MaterialButton clear = v.findViewById(R.id.btn_card_bg_clear);
+        TextView mask = v.findViewById(R.id.tv_mask_label);
+        Slider slider = v.findViewById(R.id.slider_card_mask);
+        if (day == null || bg == null || clear == null || mask == null || slider == null) {
+            return;
+        }
+        final int hour = CountdownPrefs.getDayStartHour(requireContext());
+        day.setText("日切时间：" + hour + " 点");
+        day.setOnClickListener(x -> pickDayStart(day));
+
+        Uri cur = CountdownPrefs.getCardBg(requireContext());
+        bg.setText(cur == null ? "卡片背景图：未设置" : "卡片背景图：已设置（点击更换）");
+        bg.setOnClickListener(x -> cardBgLauncher.launch(new String[]{"image/*"}));
+        clear.setVisibility(cur == null ? View.GONE : View.VISIBLE);
+        clear.setOnClickListener(x -> {
+            CountdownPrefs.setCardBg(requireContext(), null);
+            CardBg.clear();
+            bindCountdownCard(v);
+            toast("已清除背景图");
+        });
+
+        int m = CountdownPrefs.getCardMask(requireContext());
+        m = Math.round(m / 5f) * 5;
+        if (m < 0) m = 0;
+        if (m > 80) m = 80;
+        mask.setText("蒙版强度：" + m + "%");
+        slider.setValue(m);
+        slider.addOnChangeListener((sl, value, fromUser) -> {
+            int mv = (int) value;
+            mask.setText("蒙版强度：" + mv + "%");
+            CountdownPrefs.setCardMask(requireContext(), mv);
+        });
+    }
+
+    private void pickDayStart(MaterialButton btn) {
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle("日切时间（几点算新的一天）")
+                .setSingleChoiceItems(new String[]{"0 点（自然日）", "1 点", "2 点", "3 点",
+                        "4 点", "5 点", "6 点"}, CountdownPrefs.getDayStartHour(requireContext()),
+                        (d, which) -> {
+                            CountdownPrefs.setDayStartHour(requireContext(), which);
+                            btn.setText("日切时间：" + which + " 点");
+                            d.dismiss();
+                        })
+                .setNegativeButton("取消", null)
+                .show();
     }
 
     private void toast(String s) {

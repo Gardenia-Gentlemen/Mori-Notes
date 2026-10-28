@@ -81,6 +81,10 @@ public class TodoFragment extends Fragment {
                 confirmClearDone();
                 return true;
             }
+            if (item.getItemId() == R.id.action_settings) {
+                startActivity(new Intent(requireContext(), SettingsActivity.class));
+                return true;
+            }
             return false;
         });
         if (getActivity() instanceof MainActivity) {

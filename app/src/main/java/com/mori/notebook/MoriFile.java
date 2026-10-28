@@ -22,15 +22,20 @@ import javax.crypto.spec.SecretKeySpec;
  * 文件结构（JSON，UTF-8）：
  * {
  *   "magic": "MORI",
- *   "version": 1,
- *   "scope": "normal" | "private" | "all",
+ *   "version": 2,
+ *   "scope": "normal" | "private" | "all" | "custom",
+ *   "sections": { "notes": bool, "private": bool, "countdown": bool, "todo": bool },
  *   "encrypted": true/false,
  *   "createdAt": 毫秒时间戳,
- *   "count": 笔记条数,
+ *   "count": 总条数,
+ *   "counts": { "notes": n, "countdowns": n, "todos": n },
  *   "salt": Base64(16 字节盐),   // 仅加密时
  *   "iv": Base64(12 字节 IV),    // 仅加密时
- *   "data": 笔记数组 JSON 字符串（明文）或 Base64(AES/GCM 密文)
+ *   "data": 备份正文（明文）或 Base64(AES/GCM 密文)
  * }
+ *
+ * 正文（v2）为对象：{ "notes": [...], "countdowns": [...], "todos": [...] }
+ * 正文（v1，旧文件）为笔记数组 [...]，parse 时自动识别。
  *
  * 加密：PBKDF2WithHmacSHA256(8 位数字密码, salt, 12000 次) -> 256 位密钥，
  *      AES/GCM/NoPadding，128 位 tag。GCM 自带完整性校验，密码错误会抛 BadPasswordException。
@@ -41,9 +46,10 @@ public final class MoriFile {
     public static final String SCOPE_NORMAL = "normal";
     public static final String SCOPE_PRIVATE = "private";
     public static final String SCOPE_ALL = "all";
+    public static final String SCOPE_CUSTOM = "custom";
 
     private static final String MAGIC = "MORI";
-    private static final int VERSION = 1;
+    private static final int VERSION = 2;
     private static final int ITERATIONS = 12000;
     private static final int KEY_BITS = 256;
 
@@ -57,12 +63,31 @@ public final class MoriFile {
         }
     }
 
+    /** 一次备份要包含的内容 */
+    public static class Content {
+        public final List<Note> notes = new ArrayList<>();
+        public final List<Countdown> countdowns = new ArrayList<>();
+        public final List<Todo> todos = new ArrayList<>();
+        public boolean includesPrivate;
+
+        public int size() {
+            return notes.size() + countdowns.size() + todos.size();
+        }
+    }
+
     public static class Package {
         public boolean encrypted;
         public String scope = SCOPE_ALL;
+        public int version = 1;
         public int count;
         public long createdAt;
         public final List<Note> notes = new ArrayList<>();
+        public final List<Countdown> countdowns = new ArrayList<>();
+        public final List<Todo> todos = new ArrayList<>();
+
+        public int total() {
+            return notes.size() + countdowns.size() + todos.size();
+        }
     }
 
     public static boolean isValidPin(String pin) {
@@ -74,23 +99,51 @@ public final class MoriFile {
         return true;
     }
 
-    /** 生成 .mori 文件内容 */
-    public static byte[] build(List<Note> notes, String scope, boolean encrypted, String pin)
+    /** 生成 .mori 文件内容（v2，可含笔记 / 倒数日 / 待办） */
+    public static byte[] build(Content content, String scope, boolean encrypted, String pin)
             throws Exception {
-        JSONArray arr = new JSONArray();
-        if (notes != null) {
-            for (Note n : notes) {
-                if (n != null) arr.put(n.toJson());
-            }
+        Content c = content == null ? new Content() : content;
+
+        JSONArray notes = new JSONArray();
+        for (Note n : c.notes) {
+            if (n != null) notes.put(n.toJson());
         }
-        String payload = arr.toString();
+        JSONArray countdowns = new JSONArray();
+        for (Countdown d : c.countdowns) {
+            if (d != null) countdowns.put(d.toJson());
+        }
+        JSONArray todos = new JSONArray();
+        for (Todo t : c.todos) {
+            if (t != null) todos.put(t.toJson());
+        }
+
+        JSONObject payload = new JSONObject();
+        payload.put("notes", notes);
+        payload.put("countdowns", countdowns);
+        payload.put("todos", todos);
+
+        JSONObject counts = new JSONObject();
+        counts.put("notes", notes.length());
+        counts.put("countdowns", countdowns.length());
+        counts.put("todos", todos.length());
+
+        JSONObject sections = new JSONObject();
+        sections.put("notes", notes.length() > 0);
+        sections.put("private", c.includesPrivate);
+        sections.put("countdown", countdowns.length() > 0);
+        sections.put("todo", todos.length() > 0);
+
         JSONObject o = new JSONObject();
         o.put("magic", MAGIC);
         o.put("version", VERSION);
-        o.put("scope", scope == null ? SCOPE_ALL : scope);
+        o.put("scope", scope == null ? SCOPE_CUSTOM : scope);
+        o.put("sections", sections);
         o.put("encrypted", encrypted);
         o.put("createdAt", System.currentTimeMillis());
-        o.put("count", arr.length());
+        o.put("count", c.size());
+        o.put("counts", counts);
+
+        String plain = payload.toString();
         if (encrypted) {
             byte[] salt = new byte[16];
             byte[] iv = new byte[12];
@@ -98,14 +151,23 @@ public final class MoriFile {
             rnd.nextBytes(salt);
             rnd.nextBytes(iv);
             byte[] cipherText = cipher(Cipher.ENCRYPT_MODE, pin, salt, iv,
-                    payload.getBytes(StandardCharsets.UTF_8));
+                    plain.getBytes(StandardCharsets.UTF_8));
             o.put("salt", b64(salt));
             o.put("iv", b64(iv));
             o.put("data", b64(cipherText));
         } else {
-            o.put("data", payload);
+            o.put("data", plain);
         }
         return o.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    /** 兼容旧接口：只备份笔记 */
+    public static byte[] build(List<Note> notes, String scope, boolean encrypted, String pin)
+            throws Exception {
+        Content c = new Content();
+        if (notes != null) c.notes.addAll(notes);
+        c.includesPrivate = !SCOPE_NORMAL.equals(scope);
+        return build(c, scope, encrypted, pin);
     }
 
     /** 只读文件头，用于判断是否需要密码 */
@@ -122,6 +184,7 @@ public final class MoriFile {
         Package pkg = new Package();
         pkg.encrypted = o.optBoolean("encrypted", false);
         pkg.scope = o.optString("scope", SCOPE_ALL);
+        pkg.version = o.optInt("version", 1);
         pkg.count = o.optInt("count", 0);
         pkg.createdAt = o.optLong("createdAt", 0L);
 
@@ -138,9 +201,34 @@ public final class MoriFile {
             payload = data;
         }
 
-        JSONArray arr = new JSONArray(payload);
-        for (int i = 0; i < arr.length(); i++) {
-            pkg.notes.add(Note.fromJson(arr.getJSONObject(i)));
+        String body = payload == null ? "" : payload.trim();
+        if (body.startsWith("[")) {
+            // v1：纯笔记数组
+            JSONArray arr = new JSONArray(body);
+            for (int i = 0; i < arr.length(); i++) {
+                pkg.notes.add(Note.fromJson(arr.getJSONObject(i)));
+            }
+            return pkg;
+        }
+
+        JSONObject obj = new JSONObject(body);
+        JSONArray na = obj.optJSONArray("notes");
+        if (na != null) {
+            for (int i = 0; i < na.length(); i++) {
+                pkg.notes.add(Note.fromJson(na.getJSONObject(i)));
+            }
+        }
+        JSONArray ca = obj.optJSONArray("countdowns");
+        if (ca != null) {
+            for (int i = 0; i < ca.length(); i++) {
+                pkg.countdowns.add(Countdown.fromJson(ca.getJSONObject(i)));
+            }
+        }
+        JSONArray ta = obj.optJSONArray("todos");
+        if (ta != null) {
+            for (int i = 0; i < ta.length(); i++) {
+                pkg.todos.add(Todo.fromJson(ta.getJSONObject(i)));
+            }
         }
         return pkg;
     }
