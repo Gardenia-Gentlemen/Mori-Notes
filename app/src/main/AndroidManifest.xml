@@ -31,14 +31,19 @@
                 <data android:scheme="file" android:host="*" android:pathPattern=".*\\.mori" />
                 <data android:scheme="file" android:host="*" android:pathPattern=".*\\..*\\.mori" />
             </intent-filter>
-            <!-- 部分文件管理器只按 MIME 分发 -->
+            <!-- 部分文件管理器只按 MIME 分发（.mori 按纯文本处理） -->
             <intent-filter android:label="用 Mori Notes 打开">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <data android:scheme="content" />
-                <data android:scheme="file" />
-                <data android:mimeType="application/octet-stream" />
-                <data android:mimeType="application/x-mori" />
+                <data android:scheme="content" android:mimeType="text/plain" />
+                <data android:scheme="file" android:mimeType="text/plain" />
+            </intent-filter>
+            <intent-filter android:label="用 Mori Notes 打开">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" android:mimeType="text/*" />
+                <data android:scheme="file" android:mimeType="text/*" />
+                <data android:pathPattern=".*\\.mori" />
             </intent-filter>
             <!-- 分享文件到本软件 -->
             <intent-filter>

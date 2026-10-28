@@ -126,7 +126,7 @@ public final class ExportUtils {
             throws Exception {
         String n = filename == null ? "" : filename.trim();
         if (n.isEmpty()) n = "Mori-notes.mori";
-        return writeBytes(ctx, n, mime == null ? "application/octet-stream" : mime, data);
+        return writeBytes(ctx, n, mime == null ? "text/plain" : mime, data);
     }
 
     private static String withExt(String name, String ext) {
