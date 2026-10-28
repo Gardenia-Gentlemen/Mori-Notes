@@ -46,16 +46,7 @@ public class MainActivity extends BaseActivity {
             }
             return handleSelectAction(item.getItemId());
         });
-        BottomNavigationView bottomNav = findViewById(R.id.bottom_nav);
-        bottomNav.setOnItemSelectedListener(item -> {
-            int id = item.getItemId();
-            if (id == R.id.action_nav_trash) {
-                openFromBottom(bottomNav, new Intent(this, TrashActivity.class));
-            } else if (id == R.id.action_nav_settings) {
-                openFromBottom(bottomNav, new Intent(this, SettingsActivity.class));
-            }
-            return true;
-        });
+        setupBottomNav(R.id.action_nav_home);
         recycler = findViewById(R.id.recycler);
         emptyView = findViewById(R.id.tv_empty);
         adapter = new NoteAdapter(new NoteAdapter.Listener() {
@@ -215,11 +206,6 @@ public class MainActivity extends BaseActivity {
         refreshSelectMenu();
     }
 
-    /** 底部导航打开其它页面，并让「主页」保持选中 */
-    private void openFromBottom(BottomNavigationView nav, Intent intent) {
-        startActivity(intent);
-        nav.post(() -> nav.setSelectedItemId(R.id.action_nav_home));
-    }
     private void exitSelection() {
         selecting = false;
         adapter.setSelectionMode(false);

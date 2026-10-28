@@ -9,6 +9,7 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 public class BaseActivity extends AppCompatActivity {
@@ -47,6 +48,25 @@ public class BaseActivity extends AppCompatActivity {
         }
     }
 
+    /** 底部导航：回收站 | 主页 | 设置，各页面共用，当前页高亮 */
+    protected void setupBottomNav(int selectedId) {
+        BottomNavigationView nav = findViewById(R.id.bottom_nav);
+        if (nav == null) return;
+        nav.setSelectedItemId(selectedId);
+        nav.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == selectedId) return true;
+            Class<?> target = id == R.id.action_nav_trash ? TrashActivity.class
+                    : id == R.id.action_nav_settings ? SettingsActivity.class
+                    : MainActivity.class;
+            android.content.Intent i = new android.content.Intent(this, target);
+            i.addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    | android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            startActivity(i);
+            if (!(this instanceof MainActivity)) finish();
+            return true;
+        });
+    }
     protected void showBackgroundPicker() {
         new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.background)
