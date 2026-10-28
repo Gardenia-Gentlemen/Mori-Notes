@@ -133,6 +133,62 @@ def find_apk(version):
     sys.exit("找不到构建产物，先跑一次 gradle assembleRelease 或传 --apk")
 
 
+def update_readme_features(version, write=True):
+    """把该版 CHANGELOG 里 `- **标题**：说明` 条目并入 README 的「## 功能」列表。
+    标题同名（或互为子串）则追加说明，新标题直接加到列表末尾。返回 (added, merged, bullets)。"""
+    body = changelog_body(version)
+    items = []
+    for line in body.split("\n"):
+        line = line.strip()
+        if not line.startswith("- "):
+            continue
+        m = re.match(r"\*\*(.+?)\*\*\s*[：:]\s*(.+)", line[2:].strip())
+        if m:
+            items.append((m.group(1).strip(), m.group(2).strip()))
+    if not items:
+        print("README 功能：该版本 CHANGELOG 无 **标题**：说明 条目，跳过")
+        return 0, 0, []
+
+    path = os.path.join(ROOT, "README.md")
+    s = open(path, encoding="utf-8").read()
+    lines = s.split("\n")
+    try:
+        i = lines.index("## 功能")
+    except ValueError:
+        sys.exit("README.md 缺少 '## 功能' 章节")
+    j = next((k for k in range(i + 1, len(lines)) if lines[k].startswith("## ")), len(lines))
+
+    entries = []
+    for l in lines[i + 1:j]:
+        m = re.match(r"- \*\*(.+?)\*\*\s*[：:]\s*(.*)$", l.strip())
+        if m:
+            entries.append([m.group(1).strip(), m.group(2).strip()])
+
+    added = merged = 0
+    for title, text in items:
+        hit = None
+        for e in entries:
+            t = e[0]
+            if t == title or t in title or title in t:
+                hit = e
+                break
+        if hit:
+            old = hit[1].rstrip("。；; ")
+            if text not in old:
+                hit[1] = ("%s；%s" % (old, text)) if old else text
+                merged += 1
+        else:
+            entries.append([title, text])
+            added += 1
+
+    bullets = ["- **%s**：%s" % (t, x) for t, x in entries]
+    new = "\n".join(lines[:i + 1] + bullets + lines[j:])
+    if write and new != s:
+        open(path, "w", encoding="utf-8").write(new)
+    print("README 功能：新增 %d 条、补充 %d 条，共 %d 条" % (added, merged, len(bullets)))
+    return added, merged, bullets
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("version", help="新版本号，例如 1.4 / 1.4.1")
@@ -157,6 +213,12 @@ def main():
     body = changelog_body(v)
     print("更新日志: %d 字" % len(body))
 
+    _, _, feat = update_readme_features(v, write=False)
+    if a.dry_run and feat:
+        print("功能列表预览:")
+        for b in feat:
+            print("  " + b[:70])
+
     apk = a.apk or os.path.join(ROOT, "app/build/outputs/apk/release/app-release.apk")
     if a.build:
         print("构建中…")
@@ -172,6 +234,7 @@ def main():
         return
 
     snapshot_src(v)
+    update_readme_features(v, write=True)
     prev_zip = zip_src(prev) if prev else None
 
     note = os.path.join(ROOT, "releases", "v" + v, "SOURCE.md")
