@@ -52,6 +52,22 @@ app/src/main/java/com/mori/notebook/
 └── ...
 ```
 
+
+## 安装包
+
+每个版本一个独立文件夹，放在 `releases/` 下：
+
+```
+releases/
+├── v1.0/        历史版本
+├── v1.1/
+├── v1.2/
+├── v1.2.1/ ~ v1.2.5/
+└── v1.3/        当前版本
+```
+
+当前版本为 `releases/v1.3/笔记本-Notebook-v1.3.apk`（versionCode 10），签名 CN=Mori_Akira，可直接覆盖安装。
+
 ## 版本
 
 见 [CHANGELOG.md](CHANGELOG.md)。
