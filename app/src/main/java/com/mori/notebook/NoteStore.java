@@ -259,6 +259,37 @@ public class NoteStore {
         return copy;
     }
 
+    /** 批量设为 / 移出隐私笔记 */
+    public int setPrivateBatch(List<String> ids, boolean value) {
+        if (ids == null || ids.isEmpty()) return 0;
+        long now = System.currentTimeMillis();
+        int changed = 0;
+        for (String id : ids) {
+            Note n = find(id);
+            if (n == null) continue;
+            n.isPrivate = value;
+            n.updatedAt = now;
+            changed++;
+        }
+        if (changed > 0) save();
+        return changed;
+    }
+
+    /** 批量移入回收站 */
+    public int moveToTrashBatch(List<String> ids) {
+        if (ids == null || ids.isEmpty()) return 0;
+        long now = System.currentTimeMillis();
+        int changed = 0;
+        for (String id : ids) {
+            Note n = find(id);
+            if (n == null || n.inTrash()) continue;
+            n.deletedAt = now;
+            changed++;
+        }
+        if (changed > 0) save();
+        return changed;
+    }
+
     /** 批量导入（.mori）；id 冲突时换新 id，保留 isPrivate 归属，不进入回收站 */
     public int importNotes(List<Note> incoming) {
         if (incoming == null || incoming.isEmpty()) return 0;

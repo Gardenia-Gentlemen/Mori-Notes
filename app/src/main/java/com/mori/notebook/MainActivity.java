@@ -21,6 +21,8 @@ public class MainActivity extends BaseActivity {
     private NoteAdapter adapter;
     private RecyclerView recycler;
     private TextView emptyView;
+    /** 多选模式 */
+    private boolean selecting;
     /** 下拉进入隐私笔记 */
     private float pullDownY;
     private boolean pullFromTop;
@@ -46,7 +48,7 @@ public class MainActivity extends BaseActivity {
                 startActivity(new Intent(this, TrashActivity.class));
                 return true;
             }
-            return false;
+            return handleSelectAction(item.getItemId());
         });
         recycler = findViewById(R.id.recycler);
         emptyView = findViewById(R.id.tv_empty);
@@ -59,6 +61,11 @@ public class MainActivity extends BaseActivity {
             @Override
             public void onLongClick(Note note) {
                 showItemMenu(note);
+            }
+
+            @Override
+            public void onSelectionChanged(int count) {
+                updateSelectTitle();
             }
         });
         recycler.setAdapter(adapter);
@@ -128,7 +135,7 @@ public class MainActivity extends BaseActivity {
     private void showItemMenu(Note note) {
         new MaterialAlertDialogBuilder(this)
                 .setTitle(note.title == null || note.title.trim().isEmpty() ? "无标题" : note.title)
-                .setItems(new String[]{"重命名", "设为隐私笔记", "分享图片", "删除"}, (d, which) -> {
+                .setItems(new String[]{"重命名", "设为隐私笔记", "分享图片", "删除", "多选"}, (d, which) -> {
                     if (which == 0) {
                         android.widget.EditText et = new android.widget.EditText(this);
                         et.setText(note.title);
@@ -151,7 +158,7 @@ public class MainActivity extends BaseActivity {
                         Toast.makeText(this, "已设为隐私笔记，主页下拉可进入", Toast.LENGTH_LONG).show();
                     } else if (which == 2) {
                         ShareUtils.shareAsImage(this, note);
-                    } else {
+                    } else if (which == 3) {
                         new MaterialAlertDialogBuilder(this)
                                 .setMessage("删除这条笔记？将移入回收站，10 天后自动销毁。")
                                 .setPositiveButton("删除", (dd, w) -> {
@@ -161,9 +168,115 @@ public class MainActivity extends BaseActivity {
                                 })
                                 .setNegativeButton("取消", null)
                                 .show();
+                    } else {
+                        enterSelection();
+                        adapter.toggleSelection(note);
                     }
                 })
                 .show();
+    }
+
+    // ================= 多选 =================
+
+    private boolean handleSelectAction(int id) {
+        if (id == R.id.action_select) {
+            enterSelection();
+            return true;
+        }
+        if (id == R.id.action_select_all) {
+            if (adapter.selectedCount() >= adapter.getItemCount()) adapter.clearSelection();
+            else adapter.selectAll();
+            return true;
+        }
+        if (id == R.id.action_sel_cancel) {
+            exitSelection();
+            return true;
+        }
+        if (id == R.id.action_sel_private) {
+            batchSetPrivate();
+            return true;
+        }
+        if (id == R.id.action_sel_delete) {
+            batchDelete();
+            return true;
+        }
+        return false;
+    }
+
+    private void enterSelection() {
+        selecting = true;
+        adapter.setSelectionMode(true);
+        refreshSelectMenu();
+    }
+
+    private void exitSelection() {
+        selecting = false;
+        adapter.setSelectionMode(false);
+        refreshSelectMenu();
+    }
+
+    private void refreshSelectMenu() {
+        MaterialToolbar tb = findViewById(R.id.toolbar);
+        tb.getMenu().clear();
+        tb.inflateMenu(selecting ? R.menu.menu_select : R.menu.menu_main);
+        if (selecting) {
+            tb.getMenu().findItem(R.id.action_sel_normal).setVisible(false);
+            tb.getMenu().findItem(R.id.action_select).setVisible(false);
+            updateSelectTitle();
+        } else {
+            tb.setTitle(R.string.app_name);
+        }
+    }
+
+    private void updateSelectTitle() {
+        if (!selecting) return;
+        MaterialToolbar tb = findViewById(R.id.toolbar);
+        tb.setTitle("已选 " + adapter.selectedCount() + " 项");
+    }
+
+    private void batchSetPrivate() {
+        final List<String> ids = adapter.selectedIds();
+        if (ids.isEmpty()) {
+            Toast.makeText(this, "请先选择笔记", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        new MaterialAlertDialogBuilder(this)
+                .setMessage("把选中的 " + ids.size() + " 条笔记设为隐私笔记？它们将从主页消失，下拉进入隐私笔记查看。")
+                .setPositiveButton("确定", (d, w) -> {
+                    int n = store.setPrivateBatch(ids, true);
+                    exitSelection();
+                    reload();
+                    Toast.makeText(this, "已设为隐私笔记 " + n + " 条", Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
+    private void batchDelete() {
+        final List<String> ids = adapter.selectedIds();
+        if (ids.isEmpty()) {
+            Toast.makeText(this, "请先选择笔记", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        new MaterialAlertDialogBuilder(this)
+                .setMessage("删除选中的 " + ids.size() + " 条笔记？将移入回收站，10 天后自动销毁。")
+                .setPositiveButton("删除", (d, w) -> {
+                    int n = store.moveToTrashBatch(ids);
+                    exitSelection();
+                    reload();
+                    Toast.makeText(this, "已移入回收站 " + n + " 条", Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (selecting) {
+            exitSelection();
+            return;
+        }
+        super.onBackPressed();
     }
 
     private void reload() {

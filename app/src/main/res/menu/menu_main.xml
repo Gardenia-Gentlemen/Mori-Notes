@@ -10,6 +10,10 @@
         android:title="回收站"
         app:showAsAction="never" />
     <item
+        android:id="@+id/action_select"
+        android:title="多选"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/action_settings"
         android:title="@string/settings"
         app:showAsAction="never" />
