@@ -16,30 +16,6 @@
 - compileSdk 34 / minSdk 24 / targetSdk 34，Java 17
 - Gradle 8.9 + AGP 8.5，依赖 appcompat 1.7.0 / recyclerview 1.3.2 / material 1.12.0
 
-## 构建
-
-```bash
-# local.properties 里指定 SDK 路径
-echo "sdk.dir=/path/to/android-sdk" > local.properties
-
-# 签名信息（可选，不放签名也能构建出未签名包）
-cat > keystore.properties <<EOF
-storeFile=/path/to/your.jks
-storePassword=your_store_password
-keyAlias=your_key_alias
-keyPassword=your_key_password
-EOF
-
-gradle assembleRelease
-```
-
-`keystore.properties`、`local.properties`、`*.jks` 都已在 `.gitignore` 中排除，不会进仓库。
-
-> 如果在 arm64 / aarch64 环境下构建，AAPT2 需要本地替换：在 `~/.gradle/gradle.properties` 里加一行
-> `android.aapt2FromMavenOverride=/path/to/android-sdk/build-tools/34.0.0/aapt2`。此项不进仓库。
-
-
-
 见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 说明
@@ -51,18 +27,3 @@ gradle assembleRelease
 ## Releases
 
 每个版本都在 [Releases](https://github.com/Gardenia-Gentlemen/notebook/releases) 有对应标签，附件：成品包 `notebook-vX.apk`、源代码 `notebook-vX-src.zip`，说明为该版本更新日志。
-
-## 发版
-
-每次出包只跑一条命令，自动完成：构建 → 归档源码快照 `releases/v<新>/src` →
-提交推送 → 建 Release（附件 = 成品包 + **上一版本**的源代码）→ 正文取自 CHANGELOG。
-
-```bash
-export GH_TOKEN=ghp_xxx          # classic PAT，需 repo 权限（勿提交入库）
-python3 tools/release.py 1.4 --build   # 构建并发布
-python3 tools/release.py 1.4           # 用已有 app/build/outputs/apk/release/*.apk
-python3 tools/release.py 1.4 --dry-run # 只看计划，不动远端
-```
-
-发版前先在 `CHANGELOG.md` 顶部加一节 `## 1.4 (11)`，并把 `app/build.gradle` 的
-`versionName`/`versionCode` 改成一致；脚本会拿这一节当 Release 正文。
