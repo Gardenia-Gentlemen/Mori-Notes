@@ -52,6 +52,7 @@ public class CountdownEditActivity extends BaseActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        registerBackCallback();
         setContentView(R.layout.activity_countdown_edit);
         store = CountdownStore.get(this);
         String id = getIntent().getStringExtra("countdown_id");
@@ -343,12 +344,17 @@ public class CountdownEditActivity extends BaseActivity {
                 .show();
     }
 
-    @Override
-    public void onBackPressed() {
-        if (!saved && isDirty()) {
-            handleBack();
-            return;
-        }
-        super.onBackPressed();
+    private void registerBackCallback() {
+        getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (!saved && isDirty()) {
+                    handleBack();
+                    return;
+                }
+                setEnabled(false);
+                CountdownEditActivity.this.getOnBackPressedDispatcher().onBackPressed();
+            }
+        });
     }
 }

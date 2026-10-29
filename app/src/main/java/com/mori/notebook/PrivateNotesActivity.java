@@ -43,6 +43,7 @@ public class PrivateNotesActivity extends BaseActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        registerBackCallback();
         setContentView(R.layout.activity_private);
         store = NoteStore.get(this);
 
@@ -389,15 +390,19 @@ public class PrivateNotesActivity extends BaseActivity {
                 .show();
     }
 
-    @Override
-    public void onBackPressed() {
-        if (adapter != null && adapter.inSelectionMode()) {
-            exitSelection();
-            return;
-        }
-        super.onBackPressed();
+    private void registerBackCallback() {
+        getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (adapter != null && adapter.inSelectionMode()) {
+                    exitSelection();
+                    return;
+                }
+                setEnabled(false);
+                PrivateNotesActivity.this.getOnBackPressedDispatcher().onBackPressed();
+            }
+        });
     }
-
     private EditText pinInput(String hint) {
         EditText et = new EditText(this);
         et.setHint(hint);

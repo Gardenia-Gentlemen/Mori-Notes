@@ -29,6 +29,7 @@ public class MainActivity extends BaseActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        registerBackCallback();
         setContentView(R.layout.activity_main);
         toolbar = findViewById(R.id.toolbar);
         nav = findViewById(R.id.bottom_nav);
@@ -70,7 +71,7 @@ public class MainActivity extends BaseActivity {
             }
         });
         // 启动页由设置决定，默认主页（记事本）
-        int startPage = UiPrefs.getStartPage(this);
+        int startPage = UiPrefs.getStartPage(MainActivity.this);
         pager.setCurrentItem(startPage, false);
         nav.setSelectedItemId(navIdOf(startPage));
         updateToolbar(startPage);
@@ -158,15 +159,20 @@ public class MainActivity extends BaseActivity {
         }
         deliverOpenIntent(intent);
     }
-    @Override
-    public void onBackPressed() {
-        if (homeFragment != null && homeFragment.isAdded() && homeFragment.handleBack()) return;
-        int startPage = UiPrefs.getStartPage(this);
-        if (pager.getCurrentItem() != startPage) {
-            pager.setCurrentItem(startPage, true);
-            return;
-        }
-        super.onBackPressed();
+    private void registerBackCallback() {
+        getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (homeFragment != null && homeFragment.isAdded() && homeFragment.handleBack()) return;
+                int startPage = UiPrefs.getStartPage(MainActivity.this);
+                if (pager.getCurrentItem() != startPage) {
+                    pager.setCurrentItem(startPage, true);
+                    return;
+                }
+                setEnabled(false);
+                MainActivity.this.getOnBackPressedDispatcher().onBackPressed();
+            }
+        });
     }
     @Override
     protected void onResume() {

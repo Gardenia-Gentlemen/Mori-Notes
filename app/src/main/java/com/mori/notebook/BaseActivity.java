@@ -18,6 +18,34 @@ public class BaseActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         applyCutoutMode();
     }
+    /** 内容布局就绪后统一处理 edge-to-edge 内边距（Android 15+ 强制生效）。 */
+    @Override
+    public void onContentChanged() {
+        super.onContentChanged();
+        applyDefaultInsets();
+    }
+
+    /** 全屏页面可覆盖关闭默认内边距处理。 */
+    protected boolean useDefaultInsets() {
+        return true;
+    }
+
+    private void applyDefaultInsets() {
+        if (!useDefaultInsets()) return;
+        final android.view.View root = findViewById(R.id.root);
+        if (root == null) return;
+        final int l = root.getPaddingLeft();
+        final int t = root.getPaddingTop();
+        final int r = root.getPaddingRight();
+        final int b = root.getPaddingBottom();
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
+            androidx.core.graphics.Insets bars = insets.getInsets(
+                    androidx.core.view.WindowInsetsCompat.Type.systemBars());
+            v.setPadding(l + bars.left, t + bars.top, r + bars.right, b + bars.bottom);
+            return insets;
+        });
+        androidx.core.view.ViewCompat.requestApplyInsets(root);
+    }
 
     /** 让窗口延伸到刘海/挖孔区域，背景铺满，横屏不再出现黑边。 */
     private void applyCutoutMode() {

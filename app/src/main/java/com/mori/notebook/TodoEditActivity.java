@@ -27,6 +27,7 @@ public class TodoEditActivity extends BaseActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        registerBackCallback();
         setContentView(R.layout.activity_todo_edit);
         store = TodoStore.get(this);
         String id = getIntent().getStringExtra("todo_id");
@@ -115,9 +116,14 @@ public class TodoEditActivity extends BaseActivity {
                 .show();
     }
 
-    @Override
-    public void onBackPressed() {
-        save(false);
-        super.onBackPressed();
+    private void registerBackCallback() {
+        getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                save(false);
+                setEnabled(false);
+                TodoEditActivity.this.getOnBackPressedDispatcher().onBackPressed();
+            }
+        });
     }
 }

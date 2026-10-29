@@ -11,14 +11,14 @@ if (keystoreFile.exists()) {
 
 android {
     namespace 'com.mori.notebook'
-    compileSdk 34
+    compileSdk 37
 
     defaultConfig {
         applicationId "com.mori.notebook"
         minSdk 24
-        targetSdk 34
-        versionCode 20
-        versionName "1.7.6"
+        targetSdk 37
+        versionCode 21
+        versionName "1.7.7"
     }
 
     signingConfigs {
