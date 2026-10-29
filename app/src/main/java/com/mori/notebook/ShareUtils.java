@@ -199,7 +199,7 @@ public final class ShareUtils {
         return out;
     }
 
-    /** 倒数日分享图：4:3 横版画布，背景高斯模糊，卡片按列排布并整体居中（必要时等比缩小）。 */
+    /** 倒数日分享图：4:3 横版画布 + 模糊背景，卡片 16:9 圆角，按列排布并整体居中（必要时等比缩小）。 */
     public static Bitmap renderCountdownsLandscape(Context ctx, List<Countdown> list) {
         final int canvasW = dp(ctx, 720);
         final int canvasH = Math.round(canvasW * 3f / 4f);
@@ -221,7 +221,8 @@ public final class ShareUtils {
             Bitmap[] parts = new Bitmap[n];
             int mh = 0;
             for (int i = 0; i < n; i++) {
-                parts[i] = renderCountdown(ctx, list.get(i), cardW);
+                parts[i] = renderCountdown(ctx, list.get(i), cardW,
+                        Math.round(cardW * 9f / 16f), dp(ctx, 16));
                 mh = Math.max(mh, parts[i].getHeight());
             }
             int rows = (n + t - 1) / t;
@@ -362,6 +363,11 @@ public final class ShareUtils {
 
     /** 指定卡片宽度的单张倒数日卡片位图。 */
     public static Bitmap renderCountdown(Context ctx, Countdown c, int width) {
+        return renderCountdown(ctx, c, width, 0, 0);
+    }
+
+    /** 指定宽度/高度/圆角的卡片位图；fixedH>0 时固定高度且内容垂直居中，cornerPx>0 时圆角裁剪。 */
+    public static Bitmap renderCountdown(Context ctx, Countdown c, int width, int fixedH, int cornerPx) {
         width = Math.max(width, dp(ctx, 140));
         long today = CountdownTime.today();
         long diff = CountdownTime.dayDiff(today, c.date);
@@ -431,10 +437,17 @@ public final class ShareUtils {
         int wSpec = View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY);
         int hSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED);
         row.measure(wSpec, hSpec);
-        int h = Math.max(row.getMeasuredHeight(), 1);
-        row.layout(0, 0, width, h);
+        int contentH = Math.max(row.getMeasuredHeight(), 1);
+        int h = fixedH > 0 ? Math.max(fixedH, contentH) : contentH;
+        row.layout(0, (h - contentH) / 2, width, (h - contentH) / 2 + contentH);
         Bitmap bmp = Bitmap.createBitmap(width, h, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bmp);
+        if (cornerPx > 0) {
+            android.graphics.Path clip = new android.graphics.Path();
+            clip.addRoundRect(new android.graphics.RectF(0, 0, width, h), cornerPx, cornerPx,
+                    android.graphics.Path.Direction.CW);
+            canvas.clipPath(clip);
+        }
         if (hasBg) {
             drawBgCover(canvas, bg, width, h);
             drawScrim(ctx, canvas, width, h);
