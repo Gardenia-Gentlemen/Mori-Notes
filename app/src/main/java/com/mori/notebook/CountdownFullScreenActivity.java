@@ -27,6 +27,8 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
+import android.widget.SeekBar;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -337,9 +339,9 @@ public class CountdownFullScreenActivity extends BaseActivity {
 
     /** 应用背景并按需切换系统栏图标颜色。 */
     private void refreshBg() {
-        CardBg.apply(this, item.bgUri, bgView, scrimView, titleView, dateView, annivView,
-                daysView, unitView, onSurfaceC, onVariantC, onSurfaceC);
-        boolean hasBg = bgView.getVisibility() == View.VISIBLE;
+        CardBg.apply(this, item.bgUri, item.bgColor, bgView, scrimView, titleView, dateView,
+                annivView, daysView, unitView, onSurfaceC, onVariantC, onSurfaceC);
+        boolean hasBg = item.bgColor != 0 || bgView.getVisibility() == View.VISIBLE;
         // TimeTrace 式白字分级透明度：单位 60%、日期/农历/纪念日 75%、秒表 80%
         daysView.setTextColor(hasBg ? 0xFFFFFFFF : onSurfaceC);
         titleView.setTextColor(hasBg ? 0xFFFFFFFF : onSurfaceC);
@@ -384,22 +386,21 @@ public class CountdownFullScreenActivity extends BaseActivity {
 
     private void showMenu() {
         PopupMenu pm = new PopupMenu(this, menuView);
-        pm.getMenu().add(0, 1, 0, "更换背景图");
+        pm.getMenu().add(0, 1, 0, "背景");
         pm.getMenu().add(0, 2, 1, "更改标题");
         pm.getMenu().add(0, 3, 2, "保存图片");
         pm.getMenu().add(0, 5, 3, "分享图片");
-        pm.getMenu().add(0, 6, 5, "导入自定义字体");
         pm.getMenu().add(0, 8, 6, "选择字体");
         if (!TextUtils.isEmpty(item.fontPath)) {
             pm.getMenu().add(0, 7, 7, "恢复默认字体");
         }
-        if (!TextUtils.isEmpty(item.bgUri)) {
-            pm.getMenu().add(0, 4, 4, "移除背景图");
+        if (item.bgColor != 0 || !TextUtils.isEmpty(item.bgUri)) {
+            pm.getMenu().add(0, 4, 4, "移除背景");
         }
         pm.setOnMenuItemClickListener(mi -> {
             switch (mi.getItemId()) {
                 case 1:
-                    pickBg();
+                    showBgMenu();
                     return true;
                 case 2:
                     editTitle();
@@ -412,9 +413,6 @@ public class CountdownFullScreenActivity extends BaseActivity {
                     return true;
                 case 5:
                     sharePicture();
-                    return true;
-                case 6:
-                    pickFont();
                     return true;
                 case 7:
                     resetFont();
@@ -439,12 +437,139 @@ public class CountdownFullScreenActivity extends BaseActivity {
     }
 
     private void clearBg() {
-        Gallery.deleteCopy(this, item.bgUri);
+        if (!TextUtils.isEmpty(item.bgUri)) {
+            Gallery.deleteCopy(this, item.bgUri);
+        }
         item.bgUri = "";
+        item.bgColor = 0;
         CardBg.clear();
         CountdownStore.get(this).put(item);
         refreshBg();
-        toast("已移除背景图");
+        toast("已移除背景");
+    }
+
+    /** 背景二级菜单：纯色背景 / 自定义图片 / 无背景。 */
+    private void showBgMenu() {
+        PopupMenu pm = new PopupMenu(this, menuView);
+        pm.getMenu().add(0, 1, 0, "纯色背景");
+        pm.getMenu().add(0, 2, 1, "自定义图片");
+        pm.getMenu().add(0, 3, 2, "无背景");
+        pm.setOnMenuItemClickListener(mi -> {
+            switch (mi.getItemId()) {
+                case 1:
+                    showSolidDialog();
+                    return true;
+                case 2:
+                    pickBg();
+                    return true;
+                case 3:
+                    clearBg();
+                    return true;
+                default:
+                    return false;
+            }
+        });
+        pm.show();
+    }
+
+    /** 纯色背景：色盘取色 + 亮度 + HEX/潘通色号输入 + 预览。 */
+    private void showSolidDialog() {
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(20), dp(8), dp(20), dp(4));
+
+        final ColorWheelView wheel = new ColorWheelView(this);
+        int init = item.bgColor != 0 ? item.bgColor : 0xFF3F6FD8;
+        wheel.setColor(init);
+        LinearLayout.LayoutParams wlp = new LinearLayout.LayoutParams(dp(230), dp(230));
+        wlp.gravity = Gravity.CENTER_HORIZONTAL;
+        box.addView(wheel, wlp);
+
+        final View preview = new View(this);
+        LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(48));
+        plp.topMargin = dp(14);
+        box.addView(preview, plp);
+        preview.setBackgroundColor(wheel.getColor());
+
+        final SeekBar bright = new SeekBar(this);
+        bright.setMax(100);
+        bright.setProgress(Math.round(wheel.getValue() * 100f));
+        box.addView(bright);
+
+        final TextView tip = new TextView(this);
+        tip.setTextSize(12);
+        tip.setTextColor(0x99000000);
+        tip.setText("亮度");
+        box.addView(tip);
+
+        final EditText et = new EditText(this);
+        et.setSingleLine(true);
+        et.setTextSize(13);
+        et.setHint("色号：#FF5733 或 PANTONE 185 C");
+        LinearLayout.LayoutParams elp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        elp.topMargin = dp(8);
+        box.addView(et, elp);
+
+        final TextView codeTip = new TextView(this);
+        codeTip.setTextSize(12);
+        codeTip.setTextColor(0x99000000);
+        codeTip.setText("支持 HEX 与常见潘通色号（如 185 C、286 C、Cool Gray 11 C），未收录的请用色盘或 HEX。");
+        box.addView(codeTip);
+
+        final TextView applyCode = new TextView(this);
+        applyCode.setText("套用色号");
+        applyCode.setTextSize(14);
+        applyCode.setPadding(0, dp(10), 0, dp(10));
+        applyCode.setTextColor(0xFF1A73E8);
+        box.addView(applyCode);
+
+        wheel.setOnColorChanged(c -> preview.setBackgroundColor(c));
+        bright.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar sb, int p, boolean fromUser) {
+                wheel.setValue(Math.max(0.05f, p / 100f));
+                preview.setBackgroundColor(wheel.getColor());
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar sb) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar sb) {
+            }
+        });
+        applyCode.setOnClickListener(v -> {
+            int c = PantoneColors.parse(et.getText().toString());
+            if (c == 0) {
+                toast("未识别的色号，请改用 #RRGGBB 或色盘");
+                return;
+            }
+            wheel.setColor(c);
+            bright.setProgress(Math.round(wheel.getValue() * 100f));
+            preview.setBackgroundColor(wheel.getColor());
+        });
+
+        ScrollView sv = new ScrollView(this);
+        sv.addView(box);
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("纯色背景")
+                .setView(sv)
+                .setNegativeButton("取消", null)
+                .setPositiveButton("应用", (d, w) -> {
+                    if (!TextUtils.isEmpty(item.bgUri)) {
+                        Gallery.deleteCopy(this, item.bgUri);
+                    }
+                    item.bgUri = "";
+                    item.bgColor = 0xFF000000 | (wheel.getColor() & 0x00FFFFFF);
+                    CountdownStore.get(this).put(item);
+                    refreshBg();
+                    toast("已应用纯色背景");
+                })
+                .show();
     }
 
     private void editTitle() {

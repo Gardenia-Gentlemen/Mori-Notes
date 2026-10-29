@@ -10,6 +10,7 @@ package com.mori.notebook;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.net.Uri;
 import android.view.View;
 import android.widget.ImageView;
@@ -65,8 +66,39 @@ public final class CardBg {
                             TextView title, TextView date, TextView anniv,
                             TextView days, TextView unit,
                             int titleColor, int subColor, int heroColor) {
-        apply(ctx, null, bg, scrim, title, date, anniv, days, unit,
+        apply(ctx, null, 0, bg, scrim, title, date, anniv, days, unit,
                 titleColor, subColor, heroColor);
+    }
+
+    /** 颜色是否偏浅（浅色上应使用深色文字）。 */
+    public static boolean isLight(int color) {
+        double lum = (0.299 * Color.red(color) + 0.587 * Color.green(color)
+                + 0.114 * Color.blue(color)) / 255d;
+        return lum > 0.62d;
+    }
+
+    /** 纯色背景铺底：不盖蒙版，文字颜色按底色深浅自动切换。 */
+    private static void applySolid(int color, ImageView bg, View scrim,
+                                TextView title, TextView date, TextView anniv,
+                                TextView days, TextView unit,
+                                int titleColor, int subColor, int heroColor) {
+        bg.setVisibility(View.VISIBLE);
+        bg.setImageDrawable(null);
+        bg.setBackgroundColor(color);
+        scrim.setVisibility(View.GONE);
+        if (isLight(color)) {
+            title.setTextColor(titleColor);
+            date.setTextColor(subColor);
+            anniv.setTextColor(subColor);
+            days.setTextColor(heroColor);
+            unit.setTextColor(subColor);
+        } else {
+            title.setTextColor(0xFFFFFFFF);
+            date.setTextColor(0xF2FFFFFF);
+            anniv.setTextColor(0xF2FFFFFF);
+            days.setTextColor(0xFFFFFFFF);
+            unit.setTextColor(0xF2FFFFFF);
+        }
     }
 
     /** 取图片位图给编辑页预览用，失败返回 null。 */
@@ -86,6 +118,21 @@ public final class CardBg {
                             TextView title, TextView date, TextView anniv,
                             TextView days, TextView unit,
                             int titleColor, int subColor, int heroColor) {
+        apply(ctx, itemUri, 0, bg, scrim, title, date, anniv, days, unit,
+                titleColor, subColor, heroColor);
+    }
+
+    /** 应用背景；itemColor 非 0 时铺纯色，其次单条卡片图，最后全局设置。 */
+    public static void apply(Context ctx, String itemUri, int itemColor, ImageView bg, View scrim,
+                            TextView title, TextView date, TextView anniv,
+                            TextView days, TextView unit,
+                            int titleColor, int subColor, int heroColor) {
+        if (itemColor != 0) {
+            applySolid(itemColor, bg, scrim, title, date, anniv, days, unit,
+                    titleColor, subColor, heroColor);
+            return;
+        }
+        bg.setBackgroundColor(Color.TRANSPARENT);
         Uri uri = null;
         if (itemUri != null && !itemUri.isEmpty()) {
             try {
