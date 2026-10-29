@@ -216,7 +216,7 @@ public final class ShareUtils {
         int fbMaxH = 0;
         int fbH = Integer.MAX_VALUE;
         for (int t = 1; t <= n; t++) {
-            int cardW = Math.round((canvasW - gap * (t + 1)) / (float) t * 0.9f);
+            int cardW = Math.round((canvasW - gap * (t + 1)) / (float) t * 0.8f);
             if (cardW < dp(ctx, 140)) break;
             Bitmap[] parts = new Bitmap[n];
             int mh = 0;
@@ -370,7 +370,7 @@ public final class ShareUtils {
     /** 指定宽度/高度/圆角的卡片位图；fixedH>0 时固定高度且内容垂直居中，cornerPx>0 时圆角裁剪。 */
     public static Bitmap renderCountdown(Context ctx, Countdown c, int width, int fixedH, int cornerPx) {
         width = Math.max(width, dp(ctx, 140));
-        final float fs = fixedH > 0 ? 1.1f : 1f;
+        final float fs = fixedH > 0 ? 1.3f : 1f;
         long today = CountdownTime.today();
         long diff = CountdownTime.dayDiff(today, c.date);
         long abs = Math.abs(diff);
@@ -453,11 +453,10 @@ public final class ShareUtils {
         if (hasBg) {
             drawBgCover(canvas, bg, width, h);
             drawScrim(ctx, canvas, width, h);
-            if (cornerPx > 0) drawFrost(ctx, canvas, width, h, cornerPx);
+            if (cornerPx > 0) sharpenBitmap(bmp);
             row.draw(canvas);
         } else {
             canvas.drawColor(Color.WHITE);
-            if (cornerPx > 0) drawFrost(ctx, canvas, width, h, cornerPx);
             row.draw(canvas);
             Paint border = new Paint();
             border.setColor(0xFFE6E6EA);
@@ -468,15 +467,40 @@ public final class ShareUtils {
         return bmp;
     }
 
-    /** 卡片磨砂效果：半透明白色面 + 细亮边。 */
-    private static void drawFrost(Context ctx, Canvas canvas, int w, int h, int r) {
-        Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
-        p.setColor(0x1AFFFFFF);
-        canvas.drawRoundRect(new android.graphics.RectF(0, 0, w, h), r, r, p);
-        p.setStyle(Paint.Style.STROKE);
-        p.setStrokeWidth(dp(ctx, 1));
-        p.setColor(0x33FFFFFF);
-        canvas.drawRoundRect(new android.graphics.RectF(0.5f, 0.5f, w - 0.5f, h - 0.5f), r, r, p);
+    /** 轻度锐化（3x3 拉普拉斯核），提升卡片背景的清晰度。 */
+    private static void sharpenBitmap(Bitmap b) {
+        int w = b.getWidth(), h = b.getHeight();
+        if (w < 3 || h < 3) return;
+        try {
+            int[] src = new int[w * h];
+            int[] dst = new int[w * h];
+            b.getPixels(src, 0, w, 0, 0, w, h);
+            for (int y = 0; y < h; y++) {
+                for (int x = 0; x < w; x++) {
+                    int i = y * w + x;
+                    int c = src[i];
+                    if (x == 0 || y == 0 || x == w - 1 || y == h - 1) {
+                        dst[i] = c;
+                        continue;
+                    }
+                    int p1 = src[i - w], p2 = src[i + w], p3 = src[i - 1], p4 = src[i + 1];
+                    int a = (c >>> 24) & 0xFF;
+                    int r = clamp255(5 * ((c >> 16) & 0xFF) - ((p1 >> 16) & 0xFF) - ((p2 >> 16) & 0xFF)
+                            - ((p3 >> 16) & 0xFF) - ((p4 >> 16) & 0xFF));
+                    int g = clamp255(5 * ((c >> 8) & 0xFF) - ((p1 >> 8) & 0xFF) - ((p2 >> 8) & 0xFF)
+                            - ((p3 >> 8) & 0xFF) - ((p4 >> 8) & 0xFF));
+                    int bl = clamp255(5 * (c & 0xFF) - (p1 & 0xFF) - (p2 & 0xFF)
+                            - (p3 & 0xFF) - (p4 & 0xFF));
+                    dst[i] = (a << 24) | (r << 16) | (g << 8) | bl;
+                }
+            }
+            b.setPixels(dst, 0, w, 0, 0, w, h);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private static int clamp255(int v) {
+        return v < 0 ? 0 : (v > 255 ? 255 : v);
     }
 
     /** 卡片投影：沿圆角矩形向外柔和投射。 */
