@@ -216,7 +216,7 @@ public final class ShareUtils {
         int fbMaxH = 0;
         int fbH = Integer.MAX_VALUE;
         for (int t = 1; t <= n; t++) {
-            int cardW = (canvasW - gap * (t + 1)) / t;
+            int cardW = Math.round((canvasW - gap * (t + 1)) / (float) t * 0.9f);
             if (cardW < dp(ctx, 140)) break;
             Bitmap[] parts = new Bitmap[n];
             int mh = 0;
@@ -275,6 +275,7 @@ public final class ShareUtils {
             Bitmap b = bestParts[i];
             android.graphics.RectF dst = new android.graphics.RectF(
                     x, y, x + b.getWidth() * scale, y + b.getHeight() * scale);
+            drawCardShadow(ctx, canvas, dst, dp(ctx, 16) * scale);
             canvas.drawBitmap(b, null, dst, null);
         }
         return out;
@@ -369,6 +370,7 @@ public final class ShareUtils {
     /** 指定宽度/高度/圆角的卡片位图；fixedH>0 时固定高度且内容垂直居中，cornerPx>0 时圆角裁剪。 */
     public static Bitmap renderCountdown(Context ctx, Countdown c, int width, int fixedH, int cornerPx) {
         width = Math.max(width, dp(ctx, 140));
+        final float fs = fixedH > 0 ? 1.1f : 1f;
         long today = CountdownTime.today();
         long diff = CountdownTime.dayDiff(today, c.date);
         long abs = Math.abs(diff);
@@ -393,14 +395,14 @@ public final class ShareUtils {
         TextView title = new TextView(ctx);
         if (tfR != null) title.setTypeface(tfR);
         title.setText(c.title == null || c.title.isEmpty() ? "无标题" : c.title);
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f * fs);
         title.setTextColor(hasBg ? 0xFFFFFFFF : 0xFF1C1B1F);
         left.addView(title);
 
         TextView date = new TextView(ctx);
         if (tfR != null) date.setTypeface(tfR);
         date.setText(CountdownTime.formatDate(c.date) + (lunar.isEmpty() ? "" : " · " + lunar));
-        date.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+        date.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f * fs);
         date.setTextColor(hasBg ? 0xF2FFFFFF : 0xFF6B6B70);
         date.setPadding(0, dp(ctx, 4), 0, 0);
         left.addView(date);
@@ -409,7 +411,7 @@ public final class ShareUtils {
             TextView a = new TextView(ctx);
             if (tfR != null) a.setTypeface(tfR);
             a.setText(anniv);
-            a.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+            a.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f * fs);
             a.setTextColor(hasBg ? 0xF2FFFFFF : 0xFF5B5BD6);
             a.setPadding(0, dp(ctx, 4), 0, 0);
             left.addView(a);
@@ -418,14 +420,14 @@ public final class ShareUtils {
         TextView num = new TextView(ctx);
         if (tfB != null) num.setTypeface(tfB);
         num.setText(String.valueOf(abs));
-        num.setTextSize(TypedValue.COMPLEX_UNIT_SP, 34f);
+        num.setTextSize(TypedValue.COMPLEX_UNIT_SP, 34f * fs);
         num.setTextColor(hasBg ? 0xFFFFFFFF : 0xFF1C1B1F);
         row.addView(num);
 
         TextView unit = new TextView(ctx);
         if (tfR != null) unit.setTypeface(tfR);
         unit.setText(diff == 0 ? " 就是今天" : (diff > 0 ? " 天后" : " 天前"));
-        unit.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+        unit.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f * fs);
         unit.setTextColor(hasBg ? 0xF2FFFFFF : 0xFF6B6B70);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -451,9 +453,11 @@ public final class ShareUtils {
         if (hasBg) {
             drawBgCover(canvas, bg, width, h);
             drawScrim(ctx, canvas, width, h);
+            if (cornerPx > 0) drawFrost(ctx, canvas, width, h, cornerPx);
             row.draw(canvas);
         } else {
             canvas.drawColor(Color.WHITE);
+            if (cornerPx > 0) drawFrost(ctx, canvas, width, h, cornerPx);
             row.draw(canvas);
             Paint border = new Paint();
             border.setColor(0xFFE6E6EA);
@@ -462,6 +466,25 @@ public final class ShareUtils {
             canvas.drawRect(0.5f, 0.5f, width - 0.5f, h - 0.5f, border);
         }
         return bmp;
+    }
+
+    /** 卡片磨砂效果：半透明白色面 + 细亮边。 */
+    private static void drawFrost(Context ctx, Canvas canvas, int w, int h, int r) {
+        Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+        p.setColor(0x1AFFFFFF);
+        canvas.drawRoundRect(new android.graphics.RectF(0, 0, w, h), r, r, p);
+        p.setStyle(Paint.Style.STROKE);
+        p.setStrokeWidth(dp(ctx, 1));
+        p.setColor(0x33FFFFFF);
+        canvas.drawRoundRect(new android.graphics.RectF(0.5f, 0.5f, w - 0.5f, h - 0.5f), r, r, p);
+    }
+
+    /** 卡片投影：沿圆角矩形向外柔和投射。 */
+    private static void drawCardShadow(Context ctx, Canvas canvas, android.graphics.RectF r, float radius) {
+        Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+        p.setColor(0x00000000);
+        p.setShadowLayer(dp(ctx, 10), 0, dp(ctx, 4), 0x33000000);
+        canvas.drawRoundRect(r, radius, radius, p);
     }
 
     /** 该条倒数日的背景图：优先单条设置，其次全局卡片背景；无图返回 null。 */
