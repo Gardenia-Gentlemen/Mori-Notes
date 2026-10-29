@@ -199,14 +199,94 @@ public final class ShareUtils {
         return out;
     }
 
-    /** 倒数日分享为图片；多条竖向拼接 */
+    /** 倒数日分享图：4:3 横版画布，背景高斯模糊，卡片按列排布并整体居中（必要时等比缩小）。 */
+    public static Bitmap renderCountdownsLandscape(Context ctx, List<Countdown> list) {
+        final int canvasW = dp(ctx, 720);
+        final int canvasH = Math.round(canvasW * 3f / 4f);
+        final int gap = dp(ctx, 12);
+        final int pad = dp(ctx, 10);
+        final int n = list.size();
+        int bestCols = 1;
+        Bitmap[] bestParts = null;
+        int bestW = 0;
+        int bestMaxH = 0;
+        int fbCols = 1;
+        Bitmap[] fbParts = null;
+        int fbW = 0;
+        int fbMaxH = 0;
+        int fbH = Integer.MAX_VALUE;
+        for (int t = 1; t <= n; t++) {
+            int cardW = (canvasW - gap * (t + 1)) / t;
+            if (cardW < dp(ctx, 140)) break;
+            Bitmap[] parts = new Bitmap[n];
+            int mh = 0;
+            for (int i = 0; i < n; i++) {
+                parts[i] = renderCountdown(ctx, list.get(i), cardW);
+                mh = Math.max(mh, parts[i].getHeight());
+            }
+            int rows = (n + t - 1) / t;
+            int bh = rows * mh + (rows - 1) * gap;
+            if (bh < fbH) {
+                fbH = bh;
+                fbCols = t;
+                fbParts = parts;
+                fbW = cardW;
+                fbMaxH = mh;
+            }
+            if (bh <= canvasH - pad * 2) {
+                bestCols = t;
+                bestParts = parts;
+                bestW = cardW;
+                bestMaxH = mh;
+                break;
+            }
+        }
+        if (bestParts == null) {
+            bestCols = fbCols;
+            bestParts = fbParts;
+            bestW = fbW;
+            bestMaxH = fbMaxH;
+        }
+        int rows = (n + bestCols - 1) / bestCols;
+        int blockH = rows * bestMaxH + (rows - 1) * gap;
+        int firstRow = Math.min(bestCols, n);
+        int blockW = firstRow * bestW + (firstRow - 1) * gap;
+        Bitmap out = Bitmap.createBitmap(canvasW, canvasH, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(out);
+        Bitmap outer = backgroundOf(ctx, list.get(0));
+        if (outer != null) {
+            drawBgCover(canvas, blurBg(outer), canvasW, canvasH);
+            drawScrim(ctx, canvas, canvasW, canvasH);
+        } else {
+            canvas.drawColor(0xFFF6F5F8);
+        }
+        float scale = Math.min(1f, Math.min((canvasW - pad * 2) / (float) blockW,
+                (canvasH - pad * 2) / (float) blockH));
+        float baseX = (canvasW - blockW * scale) / 2f;
+        float baseY = (canvasH - blockH * scale) / 2f;
+        for (int i = 0; i < n; i++) {
+            int r = i / bestCols;
+            int c = i % bestCols;
+            int rowCount = Math.min(bestCols, n - r * bestCols);
+            float rowW = rowCount * bestW + (rowCount - 1) * gap;
+            float x = baseX + ((blockW - rowW) / 2f + c * (bestW + gap)) * scale;
+            float y = baseY + r * (bestMaxH + gap) * scale;
+            Bitmap b = bestParts[i];
+            android.graphics.RectF dst = new android.graphics.RectF(
+                    x, y, x + b.getWidth() * scale, y + b.getHeight() * scale);
+            canvas.drawBitmap(b, null, dst, null);
+        }
+        return out;
+    }
+
+    /** 倒数日分享为图片；4:3 横版 + 模糊背景 */
     public static void shareCountdownsAsImage(Context ctx, List<Countdown> list) {
         if (list == null || list.isEmpty()) {
             Toast.makeText(ctx, "没有可分享的倒数日", Toast.LENGTH_SHORT).show();
             return;
         }
         try {
-            Bitmap out = renderCountdownsList(ctx, list);
+            Bitmap out = renderCountdownsLandscape(ctx, list);
             shareBitmap(ctx, out, "倒数日" + (list.size() > 1 ? "合集" : ""),
                     "倒数日", "分享倒数日图片");
         } catch (Exception e) {
@@ -277,7 +357,12 @@ public final class ShareUtils {
     /** 单张倒数日卡片位图；有全屏背景图时以背景铺底并加蒙版。 */
     public static Bitmap renderCountdown(Context ctx, Countdown c) {
         int width = Math.min(ctx.getResources().getDisplayMetrics().widthPixels - dp(ctx, 32), dp(ctx, 720));
-        width = Math.max(width, dp(ctx, 320));
+        return renderCountdown(ctx, c, Math.max(width, dp(ctx, 320)));
+    }
+
+    /** 指定卡片宽度的单张倒数日卡片位图。 */
+    public static Bitmap renderCountdown(Context ctx, Countdown c, int width) {
+        width = Math.max(width, dp(ctx, 140));
         long today = CountdownTime.today();
         long diff = CountdownTime.dayDiff(today, c.date);
         long abs = Math.abs(diff);
@@ -380,6 +465,64 @@ public final class ShareUtils {
         return null;
     }
 
+    /** 背景模糊：先大幅降采样再多次盒式模糊，得到柔和的虚化底图。 */
+    private static Bitmap blurBg(Bitmap src) {
+        if (src == null) return null;
+        try {
+            int w = Math.max(16, src.getWidth() / 16);
+            int h = Math.max(16, src.getHeight() / 16);
+            Bitmap small = Bitmap.createScaledBitmap(src, w, h, true);
+            int[] px = new int[w * h];
+            small.getPixels(px, 0, w, 0, 0, w, h);
+            int[] tmp = new int[px.length];
+            for (int pass = 0; pass < 3; pass++) {
+                boxH(px, tmp, w, h, 2);
+                boxV(tmp, px, w, h, 2);
+            }
+            small.setPixels(px, 0, w, 0, 0, w, h);
+            return small;
+        } catch (Exception e) {
+            return src;
+        }
+    }
+
+    private static void boxH(int[] src, int[] dst, int w, int h, int r) {
+        for (int y = 0; y < h; y++) {
+            int row = y * w;
+            for (int x = 0; x < w; x++) {
+                int a = 0, rr = 0, gg = 0, bb = 0, c = 0;
+                for (int k = -r; k <= r; k++) {
+                    int xx = Math.min(w - 1, Math.max(0, x + k));
+                    int p = src[row + xx];
+                    a += (p >>> 24) & 0xFF;
+                    rr += (p >> 16) & 0xFF;
+                    gg += (p >> 8) & 0xFF;
+                    bb += p & 0xFF;
+                    c++;
+                }
+                dst[row + x] = ((a / c) << 24) | ((rr / c) << 16) | ((gg / c) << 8) | (bb / c);
+            }
+        }
+    }
+
+    private static void boxV(int[] src, int[] dst, int w, int h, int r) {
+        for (int x = 0; x < w; x++) {
+            for (int y = 0; y < h; y++) {
+                int a = 0, rr = 0, gg = 0, bb = 0, c = 0;
+                for (int k = -r; k <= r; k++) {
+                    int yy = Math.min(h - 1, Math.max(0, y + k));
+                    int p = src[yy * w + x];
+                    a += (p >>> 24) & 0xFF;
+                    rr += (p >> 16) & 0xFF;
+                    gg += (p >> 8) & 0xFF;
+                    bb += p & 0xFF;
+                    c++;
+                }
+                dst[y * w + x] = ((a / c) << 24) | ((rr / c) << 16) | ((gg / c) << 8) | (bb / c);
+            }
+        }
+    }
+
     /** 等比铺满裁剪绘制（cover）。 */
     private static void drawBgCover(Canvas canvas, Bitmap bg, int w, int h) {
         if (bg == null || w <= 0 || h <= 0) return;
@@ -388,9 +531,10 @@ public final class ShareUtils {
         float dh = bg.getHeight() * scale;
         float dx = (w - dw) / 2f;
         float dy = (h - dh) / 2f;
+        Paint filter = new Paint(Paint.FILTER_BITMAP_FLAG | Paint.ANTI_ALIAS_FLAG);
         canvas.save();
         canvas.clipRect(0, 0, w, h);
-        canvas.drawBitmap(bg, null, new android.graphics.RectF(dx, dy, dx + dw, dy + dh), null);
+        canvas.drawBitmap(bg, null, new android.graphics.RectF(dx, dy, dx + dw, dy + dh), filter);
         canvas.restore();
     }
 
