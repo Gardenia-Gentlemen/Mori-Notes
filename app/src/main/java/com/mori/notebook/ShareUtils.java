@@ -187,7 +187,7 @@ public final class ShareUtils {
         Bitmap outer = backgroundOf(ctx, list.get(0));
         if (outer != null) {
             drawBgCover(canvas, outer, width, total);
-            drawScrim(ctx, canvas, width, total);
+            drawScrim(ctx, canvas, width, total, list.get(0).maskOf(ctx));
         } else {
             canvas.drawColor(0xFFF6F5F8);
         }
@@ -257,7 +257,7 @@ public final class ShareUtils {
         Bitmap outer = backgroundOf(ctx, list.get(0));
         if (outer != null) {
             drawBgCover(canvas, blurBg(outer), canvasW, canvasH, 1.1f);
-            drawScrim(ctx, canvas, canvasW, canvasH);
+            drawScrim(ctx, canvas, canvasW, canvasH, list.get(0).maskOf(ctx));
         } else {
             canvas.drawColor(0xFFF6F5F8);
         }
@@ -376,7 +376,7 @@ public final class ShareUtils {
     public static Bitmap renderCountdown(Context ctx, Countdown c, int width, int fixedH, int cornerPx, boolean showAnniv) {
         width = Math.max(width, dp(ctx, 140));
         final float fs = fixedH > 0 ? 1.3f : 1f;
-        long today = CountdownTime.today();
+        long today = CountdownTime.today(c.dayStartHourOf());
         long diff = CountdownTime.dayDiff(today, c.date);
         long abs = Math.abs(diff);
         String lunar = LunarUtil.format(c.date);
@@ -473,7 +473,7 @@ public final class ShareUtils {
         }
         if (hasBg) {
             drawBgCover(canvas, bg, width, h);
-            drawScrim(ctx, canvas, width, h);
+            drawScrim(ctx, canvas, width, h, c.maskOf(ctx));
             if (cornerPx > 0) sharpenBitmap(bmp);
             row.draw(canvas);
         } else {
@@ -636,8 +636,9 @@ public final class ShareUtils {
     }
 
     /** 背景图上的深色蒙版，强度取卡片蒙版设置。 */
-    private static void drawScrim(Context ctx, Canvas canvas, int w, int h) {
-        int alpha = Math.round(255f * CountdownPrefs.getCardMask(ctx) / 100f);
+    private static void drawScrim(Context ctx, Canvas canvas, int w, int h, int maskPct) {
+        int mp = maskPct < 0 ? CountdownPrefs.getCardMask(ctx) : Math.max(0, Math.min(100, maskPct));
+        int alpha = Math.round(255f * mp / 100f);
         if (alpha <= 0) return;
         Paint p = new Paint();
         p.setColor(Color.BLACK);

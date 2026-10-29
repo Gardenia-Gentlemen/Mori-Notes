@@ -154,6 +154,14 @@ public final class CardBg {
                             TextView title, TextView date, TextView anniv,
                             TextView days, TextView unit,
                             int titleColor, int subColor, int heroColor) {
+        apply(ctx, itemUri, itemColor, bg, scrim, title, date, anniv, days, unit,
+                -1, titleColor, subColor, heroColor);
+    }
+    /** 带专属蒙版强度的重载；maskPct < 0 时取全局设置。 */
+    public static void apply(Context ctx, String itemUri, int itemColor, ImageView bg, View scrim,
+                            TextView title, TextView date, TextView anniv,
+                            TextView days, TextView unit, int maskPct,
+                            int titleColor, int subColor, int heroColor) {
         if (itemColor == BG_APP) {
             applyAppBg(ctx, bg, scrim, title, date, anniv, days, unit,
                     titleColor, subColor, heroColor);
@@ -188,7 +196,8 @@ public final class CardBg {
         bg.setVisibility(View.VISIBLE);
         bg.setImageBitmap(bmp);
         scrim.setVisibility(View.VISIBLE);
-        int alpha = Math.round(255f * CountdownPrefs.getCardMask(ctx) / 100f);
+        int mp = maskPct < 0 ? CountdownPrefs.getCardMask(ctx) : Math.max(0, Math.min(100, maskPct));
+        int alpha = Math.round(255f * mp / 100f);
         scrim.setBackgroundColor(0xFF000000);
         scrim.setAlpha(alpha / 255f);
         title.setTextColor(0xFFFFFFFF);

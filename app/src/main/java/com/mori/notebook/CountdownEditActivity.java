@@ -26,6 +26,8 @@ import androidx.transition.TransitionSet;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.slider.Slider;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -57,6 +59,13 @@ public class CountdownEditActivity extends BaseActivity {
     private TextView tvBgHint;
     private TextView tvBgClear;
     private String bgUri = "";
+    private MaterialButton btnDayStart;
+    private TextView tvMaskLabel;
+    private Slider sliderMask;
+    private MaterialButton btnResetGlobal;
+    /** -1 表示跟随全局设置 */
+    private int editDayStart = -1;
+    private int editCardMask = -1;
     private ActivityResultLauncher<android.content.Intent> bgPicker;
 
     @Override
@@ -89,9 +98,28 @@ public class CountdownEditActivity extends BaseActivity {
         ivBgPreview = findViewById(R.id.iv_bg_preview);
         tvBgHint = findViewById(R.id.tv_bg_hint);
         tvBgClear = findViewById(R.id.tv_bg_clear);
+        btnDayStart = findViewById(R.id.btn_day_start_edit);
+        tvMaskLabel = findViewById(R.id.tv_mask_label_edit);
+        sliderMask = findViewById(R.id.slider_mask_edit);
+        btnResetGlobal = findViewById(R.id.btn_reset_global_edit);
         bgUri = item.bgUri == null ? "" : item.bgUri;
 
         pickedDate = item.date > 0 ? item.date : CountdownTime.today();
+        editDayStart = item.dayStartHour < 0 ? -1 : item.dayStartHour;
+        editCardMask = item.cardMask < 0 ? -1 : item.cardMask;
+        bindDayStartMask();
+        btnDayStart.setOnClickListener(x -> pickDayStart());
+        sliderMask.addOnChangeListener((sl, value, fromUser) -> {
+            int mv = (int) value;
+            tvMaskLabel.setText("蒙版强度：" + mv + "%");
+            if (fromUser) editCardMask = mv;
+        });
+        btnResetGlobal.setOnClickListener(x -> {
+            editDayStart = -1;
+            editCardMask = -1;
+            bindDayStartMask();
+            Toast.makeText(this, "已恢复跟随全局设置", Toast.LENGTH_SHORT).show();
+        });
 
         etTitle.setText(item.title == null ? "" : item.title);
         etNote.setText(item.note == null ? "" : item.note);
@@ -475,6 +503,33 @@ public class CountdownEditActivity extends BaseActivity {
         rgRepeat.setVisibility(up ? View.GONE : View.VISIBLE);
     }
 
+    /** 把日切时间与蒙版强度的当前值刷到界面（-1 时从全局取缺省）。 */
+    private void bindDayStartMask() {
+        int h = editDayStart < 0 ? CountdownPrefs.getDayStartHour(this) : editDayStart;
+        btnDayStart.setText("日切时间：" + h + " 点");
+        int m = editCardMask < 0 ? CountdownPrefs.getCardMask(this) : editCardMask;
+        m = Math.round(m / 5f) * 5;
+        if (m < 0) m = 0;
+        if (m > 80) m = 80;
+        tvMaskLabel.setText("蒙版强度：" + m + "%");
+        sliderMask.setValue(m);
+    }
+
+    /** 选择这条倒数日的日切时间（0~6 点）。 */
+    private void pickDayStart() {
+        int cur = editDayStart < 0 ? CountdownPrefs.getDayStartHour(this) : editDayStart;
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("日切时间（几点算新的一天）")
+                .setSingleChoiceItems(new String[]{"0 点（自然日）", "1 点", "2 点", "3 点",
+                        "4 点", "5 点", "6 点"}, cur, (d, which) -> {
+                    editDayStart = which;
+                    btnDayStart.setText("日切时间：" + which + " 点");
+                    d.dismiss();
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
     /** 保存；返回是否已写入。 */
     private boolean save(boolean toast) {
         String title = etTitle.getText().toString().trim();
@@ -527,6 +582,8 @@ public class CountdownEditActivity extends BaseActivity {
         }
 
         item.bgUri = bgUri == null ? "" : bgUri;
+        item.dayStartHour = editDayStart;
+        item.cardMask = editCardMask;
         store.put(item);
         saved = true;
         setResult(RESULT_OK);
@@ -553,7 +610,9 @@ public class CountdownEditActivity extends BaseActivity {
         b.append(etCustomDays.getText()).append('\u0001');
         b.append(etAnnivMessage.getText()).append('\u0001');
         b.append(rgRepeat.getCheckedRadioButtonId()).append('\u0001');
-        b.append(bgUri == null ? "" : bgUri);
+        b.append(bgUri == null ? "" : bgUri).append('\u0001');
+        b.append(editDayStart).append('\u0001');
+        b.append(editCardMask);
         return b.toString();
     }
 

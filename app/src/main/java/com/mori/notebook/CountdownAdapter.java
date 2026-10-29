@@ -89,26 +89,25 @@ public class CountdownAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
     public void setData(List<Countdown> source) {
         rows.clear();
         pruneSelection(source);
-        long today = CountdownTime.today();
         List<Countdown> pinned = new ArrayList<>();
         List<Countdown> upcoming = new ArrayList<>();
         List<Countdown> past = new ArrayList<>();
         for (Countdown c : source) {
             if (c.pinned) {
                 pinned.add(c);
-            } else if (isPast(c, today)) {
+            } else if (isPast(c)) {
                 past.add(c);
             } else {
                 upcoming.add(c);
             }
         }
-        addGroup("置顶 · " + pinned.size(), pinned, today, true);
-        addGroup("还没到 · " + upcoming.size(), upcoming, today, true);
-        addGroup("已经过 · " + past.size(), past, today, false);
+        addGroup("置顶 · " + pinned.size(), pinned, true);
+        addGroup("还没到 · " + upcoming.size(), upcoming, true);
+        addGroup("已经过 · " + past.size(), past, false);
         notifyDataSetChanged();
     }
 
-    private void addGroup(String header, List<Countdown> group, long today, boolean ascending) {
+    private void addGroup(String header, List<Countdown> group, boolean ascending) {
         if (group.isEmpty()) {
             return;
         }
@@ -116,7 +115,7 @@ public class CountdownAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
         head.group = groupSeq;
         rows.add(head);
         for (Countdown c : group) {
-            Row r = buildRow(c, today);
+            Row r = buildRow(c);
             r.group = groupSeq;
             rows.add(r);
         }
@@ -124,14 +123,15 @@ public class CountdownAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
     }
 
     /** 累计态且日期已过、或重复推进后仍不该出现的，归为“已过去” */
-    private boolean isPast(Countdown c, long today) {
-        long diff = CountdownTime.dayDiff(today, c.date); // 正数=将来
+    private boolean isPast(Countdown c) {
+        long diff = CountdownTime.dayDiff(CountdownTime.today(c.dayStartHourOf()), c.date); // 正数=将来
         return Countdown.MODE_UP.equals(c.mode) ? diff > 0 : diff < 0;
     }
 
-    private Row buildRow(Countdown c, long today) {
+    private Row buildRow(Countdown c) {
         Row r = new Row(null);
         r.item = c;
+        long today = CountdownTime.today(c.dayStartHourOf());
         long diff = CountdownTime.dayDiff(today, c.date); // 正数=将来
         boolean up = Countdown.MODE_UP.equals(c.mode);
         if (up) {
@@ -214,8 +214,9 @@ public class CountdownAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
             h.anniv.setVisibility(View.VISIBLE);
             h.anniv.setText(row.anniv);
         }
-        CardBg.apply(h.itemView.getContext(), c.bgUri, h.bg, h.scrim, h.title, h.date, h.anniv,
-                h.days, h.unit, h.defaultTitle, h.defaultSub, h.defaultHero);
+        CardBg.apply(h.itemView.getContext(), c.bgUri, c.bgColor, h.bg, h.scrim, h.title, h.date, h.anniv,
+                h.days, h.unit, c.maskOf(h.itemView.getContext()),
+                h.defaultTitle, h.defaultSub, h.defaultHero);
         applyFont(h, c);
         boolean sel = selectionMode && selected.contains(c.id);
         h.card.setOnClickListener(v -> {

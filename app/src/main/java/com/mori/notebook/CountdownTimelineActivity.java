@@ -248,7 +248,7 @@ public class CountdownTimelineActivity extends BaseActivity {
 
     private void bind(Countdown c) {
         applyLook(c);
-        final long today = CountdownTime.today();
+        final long today = CountdownTime.today(c.dayStartHourOf());
         long diff = CountdownTime.dayDiff(today, c.date);
         boolean up = Countdown.MODE_UP.equals(c.mode);
 
@@ -348,7 +348,7 @@ public class CountdownTimelineActivity extends BaseActivity {
         TextView num = findViewById(R.id.tv_num);
         TextView unit = findViewById(R.id.tv_unit);
         CardBg.apply(this, c.bgUri, c.bgColor, bg, scrim, title, meta, meta, num, unit,
-                onSurfaceC, onVariantC, onSurfaceC);
+                c.maskOf(this), onSurfaceC, onVariantC, onSurfaceC);
         hasBg = c.bgColor == CardBg.BG_APP
                 ? !BackgroundPrefs.isLightStyle(this)
                 : (c.bgColor != 0 || bg.getVisibility() == View.VISIBLE);

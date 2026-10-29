@@ -116,6 +116,7 @@ public class SettingsFragment extends Fragment {
         super.onViewCreated(v, savedInstanceState);
 
         bindCountdownCard(v);
+        bindTimeZoneCard(v);
         RadioGroup rgStart = v.findViewById(R.id.rg_start_page);
         int sp = UiPrefs.getStartPage(requireContext());
         rgStart.check(sp == 0 ? R.id.radio_start_countdown
@@ -586,25 +587,13 @@ public class SettingsFragment extends Fragment {
         return Math.round(v * 100) + "%";
     }
 
-    /** 倒数日卡片设置：日切时间 / 背景图 / 蒙版强度 */
+    /** 倒数日卡片设置：全局背景图（日切与蒙版已下放到单条倒数日）。 */
     private void bindCountdownCard(View v) {
-        MaterialButton day = v.findViewById(R.id.btn_day_start);
         MaterialButton bg = v.findViewById(R.id.btn_card_bg);
         MaterialButton clear = v.findViewById(R.id.btn_card_bg_clear);
-        TextView mask = v.findViewById(R.id.tv_mask_label);
-        Slider slider = v.findViewById(R.id.slider_card_mask);
-        MaterialButton tzBtn = v.findViewById(R.id.btn_timezone);
-        if (tzBtn != null) {
-            tzBtn.setText("时区：" + timeZoneLabel());
-            tzBtn.setOnClickListener(x -> showTimeZonePicker());
-        }
-        if (day == null || bg == null || clear == null || mask == null || slider == null) {
+        if (bg == null || clear == null) {
             return;
         }
-        final int hour = CountdownPrefs.getDayStartHour(requireContext());
-        day.setText("日切时间：" + hour + " 点");
-        day.setOnClickListener(x -> pickDayStart(day));
-
         Uri cur = CountdownPrefs.getCardBg(requireContext());
         bg.setText(cur == null ? "卡片背景图：未设置" : "卡片背景图：已设置（点击更换）");
         bg.setOnClickListener(x -> cardBgLauncher.launch(new String[]{"image/*"}));
@@ -615,18 +604,16 @@ public class SettingsFragment extends Fragment {
             bindCountdownCard(v);
             toast("已清除背景图");
         });
+    }
 
-        int m = CountdownPrefs.getCardMask(requireContext());
-        m = Math.round(m / 5f) * 5;
-        if (m < 0) m = 0;
-        if (m > 80) m = 80;
-        mask.setText("蒙版强度：" + m + "%");
-        slider.setValue(m);
-        slider.addOnChangeListener((sl, value, fromUser) -> {
-            int mv = (int) value;
-            mask.setText("蒙版强度：" + mv + "%");
-            CountdownPrefs.setCardMask(requireContext(), mv);
-        });
+    /** 时区卡片：影响所有倒数日的时间换算。 */
+    private void bindTimeZoneCard(View v) {
+        MaterialButton tzBtn = v.findViewById(R.id.btn_timezone);
+        if (tzBtn == null) {
+            return;
+        }
+        tzBtn.setText("时区：" + timeZoneLabel());
+        tzBtn.setOnClickListener(x -> showTimeZonePicker());
     }
 
     /** 当前时区显示名。 */
@@ -665,7 +652,7 @@ public class SettingsFragment extends Fragment {
                     CountdownPrefs.setTimeZoneId(requireContext(), zones.get(which));
                     d.dismiss();
                     View root = getView();
-                    if (root != null) bindCountdownCard(root);
+                    if (root != null) bindTimeZoneCard(root);
                     toast("时区已切换，软件内时间按新时区换算");
                 })
                 .setNegativeButton("取消", null)
@@ -678,20 +665,6 @@ public class SettingsFragment extends Fragment {
         int abs = Math.abs(off);
         return String.format(java.util.Locale.CHINA, "GMT%s%02d:%02d",
                 off < 0 ? "-" : "+", abs / 60, abs % 60);
-    }
-
-    private void pickDayStart(MaterialButton btn) {
-        new MaterialAlertDialogBuilder(requireContext())
-                .setTitle("日切时间（几点算新的一天）")
-                .setSingleChoiceItems(new String[]{"0 点（自然日）", "1 点", "2 点", "3 点",
-                        "4 点", "5 点", "6 点"}, CountdownPrefs.getDayStartHour(requireContext()),
-                        (d, which) -> {
-                            CountdownPrefs.setDayStartHour(requireContext(), which);
-                            btn.setText("日切时间：" + which + " 点");
-                            d.dismiss();
-                        })
-                .setNegativeButton("取消", null)
-                .show();
     }
 
     private void toast(String s) {

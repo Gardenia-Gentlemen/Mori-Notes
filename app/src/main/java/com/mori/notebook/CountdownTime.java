@@ -67,8 +67,13 @@ public final class CountdownTime {
 
     /** 本地时区下的“今天”，折算成 UTC 午夜毫秒，方便与其他日期做日差。 */
     public static long today() {
+        return today(dayStartHour);
+    }
+    /** 指定日切时间下的“今天”，用于单条倒数日自定义日切。 */
+    public static long today(int hour) {
         Calendar local = Calendar.getInstance(appTz, Locale.CHINA);
-        if (local.get(Calendar.HOUR_OF_DAY) < dayStartHour) {
+        int h = Math.max(0, Math.min(23, hour));
+        if (local.get(Calendar.HOUR_OF_DAY) < h) {
             local.add(Calendar.DAY_OF_MONTH, -1);
         }
         return millisOf(local.get(Calendar.YEAR), local.get(Calendar.MONTH) + 1,

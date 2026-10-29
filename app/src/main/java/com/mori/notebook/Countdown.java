@@ -58,6 +58,18 @@ public class Countdown {
     public long deletedAt = 0L;
     /** 由整机备份导入的记录：不允许补录/修改回忆时间。 */
     public boolean imported = false;
+    /** 该条专属日切时间（0~6 点），-1 表示沿用全局设置。 */
+    public int dayStartHour = -1;
+    /** 该条专属蒙版强度（0~80），-1 表示沿用全局设置。 */
+    public int cardMask = -1;
+    /** 生效的日切时间：优先本条设置。 */
+    public int dayStartHourOf() {
+        return dayStartHour < 0 ? CountdownTime.dayStartHour() : Math.min(6, dayStartHour);
+    }
+    /** 生效的蒙版强度：优先本条设置。 */
+    public int maskOf(android.content.Context c) {
+        return cardMask < 0 ? CountdownPrefs.getCardMask(c) : Math.min(80, cardMask);
+    }
 
     public boolean inTrash() {
         return deletedAt > 0L;
@@ -111,6 +123,8 @@ public class Countdown {
             o.put("sortIndex", sortIndex);
             o.put("deletedAt", deletedAt);
             o.put("imported", imported);
+            o.put("dayStartHour", dayStartHour);
+            o.put("cardMask", cardMask);
         } catch (Exception ignored) {
         }
         return o;
@@ -139,6 +153,8 @@ public class Countdown {
         c.sortIndex = o.optInt("sortIndex", -1);
         c.deletedAt = o.optLong("deletedAt", 0L);
         c.imported = o.optBoolean("imported", false);
+        c.dayStartHour = o.optInt("dayStartHour", -1);
+        c.cardMask = o.optInt("cardMask", -1);
         if (c.id.isEmpty()) {
             c.id = UUID.randomUUID().toString();
         }

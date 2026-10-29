@@ -154,7 +154,7 @@ public class CountdownFullScreenActivity extends BaseActivity {
         int surface = MaterialColors.getColor(this,
                 com.google.android.material.R.attr.colorSurface, 0xFFFEF7FF);
 
-        final long today = CountdownTime.today();
+        final long today = CountdownTime.today(item.dayStartHourOf());
         long diff = CountdownTime.dayDiff(today, item.date);
         boolean up = Countdown.MODE_UP.equals(item.mode);
 
@@ -339,7 +339,8 @@ public class CountdownFullScreenActivity extends BaseActivity {
     /** 应用背景并按需切换系统栏图标颜色。 */
     private void refreshBg() {
         CardBg.apply(this, item.bgUri, item.bgColor, bgView, scrimView, titleView, dateView,
-                annivView, daysView, unitView, onSurfaceC, onVariantC, onSurfaceC);
+                annivView, daysView, unitView, item.maskOf(this),
+                onSurfaceC, onVariantC, onSurfaceC);
         boolean hasBg = item.bgColor == CardBg.BG_APP
                 ? !BackgroundPrefs.isLightStyle(this)
                 : (item.bgColor != 0 || bgView.getVisibility() == View.VISIBLE);
