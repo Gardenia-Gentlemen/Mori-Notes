@@ -359,8 +359,11 @@ public class CountdownFragment extends Fragment {
     /** 打开上游项目主页 */
     private void openKippu() {
         try {
-            startActivity(new Intent(Intent.ACTION_VIEW,
-                    android.net.Uri.parse("https://github.com/KIPPUDESU/KIPPU_Trace")));
+            Intent it = new Intent(Intent.ACTION_VIEW,
+                    android.net.Uri.parse("https://github.com/KIPPUDESU/KIPPU_Trace"));
+            it.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+            startActivity(it);
+            if (getActivity() != null) getActivity().overridePendingTransition(0, 0);
         } catch (Exception e) {
             toast("没有可以打开链接的应用");
         }
