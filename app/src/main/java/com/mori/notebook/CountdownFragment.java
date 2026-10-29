@@ -125,10 +125,6 @@ public class CountdownFragment extends Fragment {
         recycler.setAdapter(adapter);
         recycler.setHasFixedSize(true);
         attachDragSort();
-        View credit = view.findViewById(R.id.tv_credit_kippu);
-        if (credit != null) {
-            credit.setOnClickListener(v -> openKippu());
-        }
         FloatingActionButton fab = view.findViewById(R.id.fab_countdown);
         fab.setOnClickListener(v -> create());
         applyToolbar();
@@ -354,16 +350,6 @@ public class CountdownFragment extends Fragment {
                     toast("已删除 " + n + " 个");
                 })
                 .show();
-    }
-
-    /** 打开上游项目主页 */
-    private void openKippu() {
-        try {
-            startActivity(new Intent(Intent.ACTION_VIEW,
-                    android.net.Uri.parse("https://github.com/KIPPUDESU/KIPPU_Trace")));
-        } catch (Exception e) {
-            toast("没有可以打开链接的应用");
-        }
     }
 
     private void create() {

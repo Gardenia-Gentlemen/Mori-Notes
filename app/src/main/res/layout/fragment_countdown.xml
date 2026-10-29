@@ -44,7 +44,6 @@
             android:id="@+id/tv_credit_kippu"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:background="?attr/selectableItemBackgroundBorderless"
             android:letterSpacing="0.06"
             android:paddingStart="8dp"
             android:paddingEnd="8dp"
