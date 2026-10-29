@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -18,18 +19,29 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
+import java.util.ArrayList;
 import java.util.List;
 
-/** 待办页：分组列表、勾选完成、左滑删除 */
+/** 待办页：筛选、分组列表、勾选完成、左滑删除 */
 public class TodoFragment extends Fragment {
+    private static final int FILTER_ALL = 0;
+    private static final int FILTER_TODAY = 1;
+    private static final int FILTER_OVERDUE = 2;
+    private static final int FILTER_DONE = 3;
 
     private TodoStore store;
     private TodoAdapter adapter;
     private RecyclerView recycler;
     private View emptyView;
+    private TextView emptyTitle;
+    private TextView emptySub;
+    private MaterialButtonToggleGroup tgFilter;
+    private int filter = FILTER_ALL;
+
     /** 滑动删除时绘制红色背景 */
     private Paint swipePaint;
     private final RectF swipeRect = new RectF();
@@ -46,6 +58,18 @@ public class TodoFragment extends Fragment {
         store = TodoStore.get(requireContext());
         recycler = view.findViewById(R.id.recycler_todo);
         emptyView = view.findViewById(R.id.empty_todo);
+        emptyTitle = view.findViewById(R.id.tv_empty_title);
+        emptySub = view.findViewById(R.id.tv_empty_sub);
+        tgFilter = view.findViewById(R.id.tg_filter);
+        tgFilter.check(R.id.btn_f_all);
+        tgFilter.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
+            if (!isChecked) return;
+            filter = checkedId == R.id.btn_f_today ? FILTER_TODAY
+                    : checkedId == R.id.btn_f_overdue ? FILTER_OVERDUE
+                    : checkedId == R.id.btn_f_done ? FILTER_DONE : FILTER_ALL;
+            reload();
+        });
+
         adapter = new TodoAdapter(new TodoAdapter.Listener() {
             @Override
             public void onToggle(Todo todo, boolean done) {
@@ -62,7 +86,6 @@ public class TodoFragment extends Fragment {
         recycler.setAdapter(adapter);
         recycler.setHasFixedSize(true);
         attachSwipe();
-
         FloatingActionButton fab = view.findViewById(R.id.fab_todo);
         fab.setOnClickListener(v -> startActivity(new Intent(requireContext(), TodoEditActivity.class)));
         applyToolbar();
@@ -197,9 +220,35 @@ public class TodoFragment extends Fragment {
         if (store == null || adapter == null) return;
         List<Todo> active = store.getActive();
         List<Todo> done = store.getDone();
-        adapter.setData(active, done);
-        if (emptyView != null) {
-            emptyView.setVisibility(active.isEmpty() && done.isEmpty() ? View.VISIBLE : View.GONE);
+        List<Todo> showActive = new ArrayList<>();
+        List<Todo> showDone = new ArrayList<>();
+        if (filter == FILTER_ALL) {
+            showActive.addAll(active);
+            showDone.addAll(done);
+        } else if (filter == FILTER_TODAY) {
+            for (Todo t : active) if (t.isDueToday()) showActive.add(t);
+        } else if (filter == FILTER_OVERDUE) {
+            for (Todo t : active) if (t.isOverdue()) showActive.add(t);
+        } else if (filter == FILTER_DONE) {
+            showDone.addAll(done);
+        }
+        adapter.setData(showActive, showDone);
+        boolean empty = showActive.isEmpty() && showDone.isEmpty();
+        if (emptyView != null) emptyView.setVisibility(empty ? View.VISIBLE : View.GONE);
+        if (empty && emptyTitle != null) {
+            if (filter == FILTER_TODAY) {
+                emptyTitle.setText("今天没有截止的待办");
+                emptySub.setText("享受一下空闲");
+            } else if (filter == FILTER_OVERDUE) {
+                emptyTitle.setText("没有逾期的待办");
+                emptySub.setText("保持这个状态");
+            } else if (filter == FILTER_DONE) {
+                emptyTitle.setText("还没有已完成的待办");
+                emptySub.setText("去把事情做完吧");
+            } else {
+                emptyTitle.setText("还没有待办");
+                emptySub.setText("点右下角 + 记一件要做的事");
+            }
         }
     }
 

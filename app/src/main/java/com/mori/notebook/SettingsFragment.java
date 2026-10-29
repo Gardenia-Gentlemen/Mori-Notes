@@ -23,13 +23,11 @@ import com.google.android.material.slider.Slider;
 
 public class SettingsFragment extends Fragment {
 
-    private TextView tvLocation;
     private TextView tvBgName;
     private TextView tvPrivacyState;
 
     private ActivityResultLauncher<String[]> cardBgLauncher;
     private ActivityResultLauncher<Intent> deviceLauncher;
-    private ActivityResultLauncher<Uri> folderPicker;
     private ActivityResultLauncher<Intent> authLauncher;
     private ActivityResultLauncher<String[]> importLauncher;
     private Runnable pendingAuthAction;
@@ -95,18 +93,6 @@ public class SettingsFragment extends Fragment {
                     }
                 });
 
-        folderPicker = registerForActivityResult(new ActivityResultContracts.OpenDocumentTree(), uri -> {
-            if (uri == null) return;
-            try {
-                requireContext().getContentResolver().takePersistableUriPermission(uri,
-                        Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-            } catch (Exception ignored) {
-            }
-            NoteStore store = NoteStore.get(requireContext());
-            boolean loaded = store.switchLocation(uri);
-            if (tvLocation != null) tvLocation.setText(store.locationLabel());
-            toast(loaded ? "已切换到该目录，加载了其中已有的笔记" : "笔记已保存到该目录");
-        });
 
         deviceLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(), result -> {
@@ -177,8 +163,6 @@ public class SettingsFragment extends Fragment {
             tvValue.setText(percent(value));
         });
 
-        tvLocation = v.findViewById(R.id.tv_location);
-        tvLocation.setText(NoteStore.get(requireContext()).locationLabel());
 
         TextView tvVer = v.findViewById(R.id.tv_version);
         tvVer.setText(versionLabel());
@@ -187,14 +171,6 @@ public class SettingsFragment extends Fragment {
         MaterialButton btnLic = v.findViewById(R.id.btn_licenses);
         btnLic.setOnClickListener(x -> showOpenSourceLicense());
 
-        MaterialButton pick = v.findViewById(R.id.btn_pick_folder);
-        pick.setOnClickListener(x -> {
-            try {
-                folderPicker.launch(null);
-            } catch (Exception e) {
-                toast("无法打开文件夹选择器");
-            }
-        });
 
         tvPrivacyState = v.findViewById(R.id.tv_privacy_state);
         updatePrivacyState();
@@ -208,13 +184,6 @@ public class SettingsFragment extends Fragment {
         MaterialButton btnImportNotes = v.findViewById(R.id.btn_import_notes);
         btnImportNotes.setOnClickListener(x -> startImportMori());
 
-        MaterialButton reset = v.findViewById(R.id.btn_reset_folder);
-        reset.setOnClickListener(x -> {
-            NoteStore store = NoteStore.get(requireContext());
-            store.useInternal();
-            tvLocation.setText(store.locationLabel());
-            toast("已恢复为应用内部存储");
-        });
     }
 
     @Override
@@ -445,7 +414,7 @@ public class SettingsFragment extends Fragment {
     }
     /** 含隐私笔记时必须为文件设置 8 位数字密码；其余组合明文导出 */
     private void askExportPassword(BackupSel sel) {
-        if (!sel.priv) {
+        if (!willExportPrivate(sel)) {
             doExportMori(sel, null);
             return;
         }
@@ -477,6 +446,15 @@ public class SettingsFragment extends Fragment {
                 .setNegativeButton("取消", null)
                 .show();
     }
+    /** 本次选择是否真的会带出隐私笔记（选了隐私但库里没有时不需要密码） */
+    private boolean willExportPrivate(BackupSel sel) {
+        if (!sel.priv) return false;
+        for (Note n : NoteStore.get(requireContext()).notesForScope(MoriFile.SCOPE_ALL)) {
+            if (n != null && n.isPrivate) return true;
+        }
+        return false;
+    }
+
     private void doExportMori(BackupSel sel, String pin) {
         MoriFile.Content content = new MoriFile.Content();
         NoteStore store = NoteStore.get(requireContext());
@@ -511,7 +489,7 @@ public class SettingsFragment extends Fragment {
             toast("没有可导出的内容");
             return;
         }
-        boolean enc = sel.priv;
+        boolean enc = pin != null && sel.priv;
         String label = describe(content);
         try {
             byte[] data = MoriFile.build(content, MoriFile.SCOPE_CUSTOM, enc, pin);

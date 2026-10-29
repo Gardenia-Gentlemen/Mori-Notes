@@ -301,18 +301,36 @@ public class NoteStore {
 
     /** 批量导入（.mori）；id 冲突时换新 id，保留 isPrivate 归属，不进入回收站 */
     public int importNotes(List<Note> incoming) {
+        return importNotes(incoming, false);
+    }
+
+    /**
+     * 导入笔记。
+     * merge=false（追加）：全部作为新条目加入，id 冲突时换新 id，本机原内容不受影响。
+     * merge=true（合并）：同 id 且不在回收站时以文件内容覆盖；其余按新增处理。
+     */
+    public int importNotes(List<Note> incoming, boolean merge) {
         if (incoming == null || incoming.isEmpty()) return 0;
-        int added = 0;
+        int count = 0;
         for (Note n : incoming) {
             if (n == null) continue;
-            if (n.id == null || n.id.trim().isEmpty() || find(n.id) != null) {
-                n.id = java.util.UUID.randomUUID().toString();
+            boolean hasId = n.id != null && !n.id.trim().isEmpty();
+            Note existing = hasId ? find(n.id) : null;
+            if (merge && existing != null && !existing.inTrash()) {
+                existing.title = n.title;
+                existing.content = n.content;
+                existing.type = n.type;
+                existing.updatedAt = n.updatedAt;
+                existing.isPrivate = n.isPrivate;
+                existing.deletedAt = 0L;
+            } else {
+                if (!hasId || existing != null) n.id = java.util.UUID.randomUUID().toString();
+                n.deletedAt = 0L;
+                notes.add(n);
             }
-            n.deletedAt = 0L;
-            notes.add(n);
-            added++;
+            count++;
         }
-        if (added > 0) save();
-        return added;
+        if (count > 0) save();
+        return count;
     }
 }
