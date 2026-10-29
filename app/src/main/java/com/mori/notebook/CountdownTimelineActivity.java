@@ -100,9 +100,7 @@ public class CountdownTimelineActivity extends BaseActivity {
         if (!isNew) etPlace.setText(editing.place);
         box.addView(etPlace);
 
-        TimeZone tz = isNew ? TimeZone.getDefault()
-                : TimeZone.getTimeZone(TextUtils.isEmpty(editing.timeZone)
-                        ? TimeZone.getDefault().getID() : editing.timeZone);
+        TimeZone tz = CountdownTime.timeZone();
         long at = isNew ? System.currentTimeMillis() : editing.timeMs;
         SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
         fmt.setTimeZone(tz);
@@ -110,7 +108,7 @@ public class CountdownTimelineActivity extends BaseActivity {
         tvTime.setTextSize(12);
         tvTime.setPadding(0, dp(8), 0, 0);
         tvTime.setText((isNew ? "时间：保存时自动取本机当前时间\n" : "时间：创建后固定，修改不会改变\n")
-                + fmt.format(new Date(at)) + " · " + tz.getID());
+                + fmt.format(new Date(at)));
         box.addView(tvTime);
 
         new MaterialAlertDialogBuilder(this)
@@ -132,7 +130,7 @@ public class CountdownTimelineActivity extends BaseActivity {
                         n.text = text;
                         n.place = place;
                         n.timeMs = System.currentTimeMillis();
-                        n.timeZone = TimeZone.getDefault().getID();
+                        n.timeZone = CountdownTime.timeZone().getID();
                         store.add(n);
                     } else {
                         editing.text = text;
@@ -230,13 +228,7 @@ public class CountdownTimelineActivity extends BaseActivity {
         for (TimelineNote n : TimelineNoteStore.get(this).list(c.id)) {
             StringBuilder sub = new StringBuilder();
             if (!TextUtils.isEmpty(n.place)) sub.append(n.place).append(" · ");
-            SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault());
-            if (!TextUtils.isEmpty(n.timeZone)) f.setTimeZone(TimeZone.getTimeZone(n.timeZone));
-            sub.append(f.format(new Date(n.timeMs)));
-            if (!TextUtils.isEmpty(n.timeZone)) {
-                sub.append(" ").append(TimeZone.getTimeZone(n.timeZone)
-                        .getDisplayName(false, TimeZone.SHORT));
-            }
+            sub.append(CountdownTime.formatDateTime(n.timeMs));
             String main = TextUtils.isEmpty(n.text) ? "记录" : n.text;
             nodes.add(new Node(n.timeMs, main, sub.toString(), n));
         }

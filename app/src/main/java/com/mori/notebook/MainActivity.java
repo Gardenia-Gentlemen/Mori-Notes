@@ -14,6 +14,7 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
  * 设置已从底栏移出，入口在主页顶栏菜单；回收站入口同在顶栏菜单。
  */
 public class MainActivity extends BaseActivity {
+    private boolean tzDialogShown;
     private static final int PAGE_COUNTDOWN = 0;
     private static final int PAGE_HOME = 1;
     private static final int PAGE_TODO = 2;
@@ -172,6 +173,47 @@ public class MainActivity extends BaseActivity {
         super.onResume();
         applyNavTheme();
         if (homeFragment != null && homeFragment.isAdded()) homeFragment.applyToolbar();
+        checkTimeZoneChange();
+    }
+
+    /** 手机时区变更时询问是否同步应用时区。 */
+    private void checkTimeZoneChange() {
+        final String sys = java.util.TimeZone.getDefault().getID();
+        String seen = CountdownPrefs.getSeenSystemTimeZone(this);
+        if (seen.isEmpty()) {
+            CountdownPrefs.setSeenSystemTimeZone(this, sys);
+            return;
+        }
+        if (sys.equals(seen)) return;
+        if (CountdownPrefs.isFollowSystem(this)) {
+            CountdownPrefs.setSeenSystemTimeZone(this, sys);
+            CountdownTime.setTimeZone(sys);
+            return;
+        }
+        final String cur = CountdownPrefs.resolveTimeZoneId(this);
+        if (cur.equals(sys)) {
+            // 应用时区已经就是新系统时区，无需询问
+            CountdownPrefs.setSeenSystemTimeZone(this, sys);
+            CountdownTime.setTimeZone(sys);
+            return;
+        }
+        if (tzDialogShown) return;
+        tzDialogShown = true;
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                .setTitle("手机时区已变更")
+                .setMessage("检测到手机时区变更为 " + sys + "。\n是否把应用时区由 " + cur
+                        + " 同步为 " + sys + "？")
+                .setNegativeButton("保持当前", (d, w) -> {
+                    tzDialogShown = false;
+                    CountdownPrefs.setSeenSystemTimeZone(this, sys);
+                })
+                .setPositiveButton("同步", (d, w) -> {
+                    tzDialogShown = false;
+                    CountdownPrefs.setTimeZoneId(this, sys);
+                    CountdownPrefs.setSeenSystemTimeZone(this, sys);
+                    recreate();
+                })
+                .show();
     }
     /** 主页隐藏/显示底部导航（多选时隐藏） */
     public void setBottomNavVisible(boolean visible) {

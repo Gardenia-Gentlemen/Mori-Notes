@@ -67,7 +67,7 @@ public final class CountdownTime {
 
     /** 本地时区下的“今天”，折算成 UTC 午夜毫秒，方便与其他日期做日差。 */
     public static long today() {
-        Calendar local = Calendar.getInstance(Locale.CHINA);
+        Calendar local = Calendar.getInstance(appTz, Locale.CHINA);
         if (local.get(Calendar.HOUR_OF_DAY) < dayStartHour) {
             local.add(Calendar.DAY_OF_MONTH, -1);
         }
@@ -172,6 +172,30 @@ public final class CountdownTime {
             sb.append(r.days).append("天");
         }
         return sb.toString();
+    }
+
+    /* ==================== 时区 ==================== */
+    private static TimeZone appTz = TimeZone.getDefault();
+
+    /** 设置应用时区；空值回退到系统默认时区。 */
+    public static void setTimeZone(String id) {
+        if (id == null || id.trim().isEmpty()) {
+            appTz = TimeZone.getDefault();
+            return;
+        }
+        appTz = TimeZone.getTimeZone(id.trim());
+    }
+
+    public static TimeZone timeZone() {
+        return appTz;
+    }
+
+    /** 按应用时区格式化「yyyy-MM-dd HH:mm」。 */
+    public static String formatDateTime(long millis) {
+        java.text.SimpleDateFormat f =
+                new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.CHINA);
+        f.setTimeZone(appTz);
+        return f.format(new java.util.Date(millis));
     }
 
     /* ==================== 文本 ==================== */

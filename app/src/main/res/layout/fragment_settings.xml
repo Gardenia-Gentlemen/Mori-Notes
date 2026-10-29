@@ -322,6 +322,13 @@
                         android:layout_marginTop="14dp"
                         android:text="日切时间：0 点" />
                     <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_timezone"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="时区：跟随系统" />
+                    <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_card_bg"
                         style="@style/Widget.Material3.Button.OutlinedButton"
                         android:layout_width="match_parent"

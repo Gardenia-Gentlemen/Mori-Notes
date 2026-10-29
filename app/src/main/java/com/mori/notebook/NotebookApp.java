@@ -12,6 +12,11 @@ public class NotebookApp extends Application {
         super.onCreate();
         applyTheme(this);
         CountdownTime.setDayStartHour(CountdownPrefs.getDayStartHour(this));
+        // 首次启动：时区默认取手机系统时区；之后沿用用户选择
+        CountdownTime.setTimeZone(CountdownPrefs.resolveTimeZoneId(this));
+        if (CountdownPrefs.getSeenSystemTimeZone(this).isEmpty()) {
+            CountdownPrefs.setSeenSystemTimeZone(this, java.util.TimeZone.getDefault().getID());
+        }
     }
 
     public static void applyTheme(Context c) {

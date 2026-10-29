@@ -619,6 +619,11 @@ public class SettingsFragment extends Fragment {
         MaterialButton clear = v.findViewById(R.id.btn_card_bg_clear);
         TextView mask = v.findViewById(R.id.tv_mask_label);
         Slider slider = v.findViewById(R.id.slider_card_mask);
+        MaterialButton tzBtn = v.findViewById(R.id.btn_timezone);
+        if (tzBtn != null) {
+            tzBtn.setText("时区：" + timeZoneLabel());
+            tzBtn.setOnClickListener(x -> showTimeZonePicker());
+        }
         if (day == null || bg == null || clear == null || mask == null || slider == null) {
             return;
         }
@@ -648,6 +653,57 @@ public class SettingsFragment extends Fragment {
             mask.setText("蒙版强度：" + mv + "%");
             CountdownPrefs.setCardMask(requireContext(), mv);
         });
+    }
+
+    /** 当前时区显示名。 */
+    private String timeZoneLabel() {
+        if (CountdownPrefs.isFollowSystem(requireContext())) {
+            return "跟随系统（" + java.util.TimeZone.getDefault().getID() + "）";
+        }
+        return CountdownPrefs.resolveTimeZoneId(requireContext());
+    }
+
+    /** 时区选择：跟随系统 + 常用时区。 */
+    private void showTimeZonePicker() {
+        final java.util.List<String> zones = new java.util.ArrayList<>();
+        zones.add("");
+        java.util.Collections.addAll(zones, "Asia/Shanghai", "Asia/Hong_Kong", "Asia/Taipei",
+                "Asia/Tokyo", "Asia/Seoul", "Asia/Singapore", "Asia/Bangkok", "Asia/Kolkata",
+                "Asia/Dubai", "Europe/London", "Europe/Paris", "Europe/Berlin", "Europe/Moscow",
+                "America/New_York", "America/Chicago", "America/Los_Angeles",
+                "America/Sao_Paulo", "Australia/Sydney", "Pacific/Auckland", "UTC");
+        final String cur = CountdownPrefs.getTimeZoneId(requireContext()).trim();
+        if (!cur.isEmpty() && !zones.contains(cur)) zones.add(cur);
+        String[] labels = new String[zones.size()];
+        int checked = 0;
+        for (int i = 0; i < zones.size(); i++) {
+            String id = zones.get(i);
+            if (id.isEmpty()) {
+                labels[i] = "跟随系统（" + java.util.TimeZone.getDefault().getID() + "）";
+            } else {
+                labels[i] = id + "（" + offsetLabel(id) + "）";
+            }
+            if (id.equals(cur)) checked = i;
+        }
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle("时区")
+                .setSingleChoiceItems(labels, checked, (d, which) -> {
+                    CountdownPrefs.setTimeZoneId(requireContext(), zones.get(which));
+                    d.dismiss();
+                    View root = getView();
+                    if (root != null) bindCountdownCard(root);
+                    toast("时区已切换，软件内时间按新时区换算");
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
+    /** GMT±HH:mm 形式的偏移标签。 */
+    private String offsetLabel(String id) {
+        int off = java.util.TimeZone.getTimeZone(id).getOffset(System.currentTimeMillis()) / 60000;
+        int abs = Math.abs(off);
+        return String.format(java.util.Locale.CHINA, "GMT%s%02d:%02d",
+                off < 0 ? "-" : "+", abs / 60, abs % 60);
     }
 
     private void pickDayStart(MaterialButton btn) {

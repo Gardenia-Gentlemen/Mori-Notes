@@ -11,12 +11,16 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.net.Uri;
 
+import java.util.TimeZone;
+
 public final class CountdownPrefs {
     private static final String P = "countdown_prefs";
     private static final String K_HOUR = "day_start_hour";
     private static final String K_BG = "card_bg_uri";
     private static final String K_MASK = "card_mask";
     private static final String K_FONT = "fullscreen_font_path";
+    private static final String K_TZ = "timezone_id";
+    private static final String K_TZ_SYS = "sys_timezone_seen";
 
     private CountdownPrefs() {
     }
@@ -68,6 +72,43 @@ public final class CountdownPrefs {
             sp(c).edit().remove(K_FONT).apply();
         } else {
             sp(c).edit().putString(K_FONT, path).apply();
+        }
+    }
+    /** 应用时区 ID：空字符串表示跟随系统。 */
+    public static String getTimeZoneId(Context c) {
+        return sp(c).getString(K_TZ, "");
+    }
+
+    /** 实际生效的时区 ID（跟随系统时解析为系统当前时区）。 */
+    public static String resolveTimeZoneId(Context c) {
+        String id = getTimeZoneId(c).trim();
+        return id.isEmpty() ? TimeZone.getDefault().getID() : id;
+    }
+
+    public static boolean isFollowSystem(Context c) {
+        return getTimeZoneId(c).trim().isEmpty();
+    }
+
+    /** 设置应用时区；null 或空表示跟随系统。写入后立即同步到运行时。 */
+    public static void setTimeZoneId(Context c, String id) {
+        if (id == null || id.trim().isEmpty()) {
+            sp(c).edit().remove(K_TZ).apply();
+        } else {
+            sp(c).edit().putString(K_TZ, id.trim()).apply();
+        }
+        CountdownTime.setTimeZone(resolveTimeZoneId(c));
+    }
+
+    /** 上一次已确认过的系统时区，用于检测手机时区变化。 */
+    public static String getSeenSystemTimeZone(Context c) {
+        return sp(c).getString(K_TZ_SYS, "");
+    }
+
+    public static void setSeenSystemTimeZone(Context c, String id) {
+        if (id == null || id.trim().isEmpty()) {
+            sp(c).edit().remove(K_TZ_SYS).apply();
+        } else {
+            sp(c).edit().putString(K_TZ_SYS, id.trim()).apply();
         }
     }
 }
