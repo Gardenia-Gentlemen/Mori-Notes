@@ -472,7 +472,7 @@ public class CountdownFullScreenActivity extends BaseActivity {
         pm.show();
     }
 
-    /** 纯色背景：色盘取色 + 亮度 + HEX/潘通色号输入 + 预览。 */
+    /** 纯色背景：色盘取色 + 亮度 + HEX/RGB 输入 + 预览。 */
     private void showSolidDialog() {
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
@@ -503,10 +503,16 @@ public class CountdownFullScreenActivity extends BaseActivity {
         tip.setText("亮度");
         box.addView(tip);
 
+        final TextView hexNow = new TextView(this);
+        hexNow.setTextSize(13);
+        hexNow.setTextColor(0xFF000000);
+        hexNow.setText("当前 " + ColorCodes.hex(wheel.getColor()));
+        box.addView(hexNow);
+
         final EditText et = new EditText(this);
         et.setSingleLine(true);
         et.setTextSize(13);
-        et.setHint("色号：#FF5733 或 PANTONE 185 C");
+        et.setHint("HEX：#FF5733　或　RGB：255,87,51");
         LinearLayout.LayoutParams elp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         elp.topMargin = dp(8);
@@ -515,22 +521,26 @@ public class CountdownFullScreenActivity extends BaseActivity {
         final TextView codeTip = new TextView(this);
         codeTip.setTextSize(12);
         codeTip.setTextColor(0x99000000);
-        codeTip.setText("支持 HEX 与常见潘通色号（如 185 C、286 C、Cool Gray 11 C），未收录的请用色盘或 HEX。");
+        codeTip.setText("支持 HEX（#RRGGBB / RRGGBB）与 RGB（255,87,51），也可直接点色盘取色。");
         box.addView(codeTip);
 
         final TextView applyCode = new TextView(this);
-        applyCode.setText("套用色号");
+        applyCode.setText("套用编码");
         applyCode.setTextSize(14);
         applyCode.setPadding(0, dp(10), 0, dp(10));
         applyCode.setTextColor(0xFF1A73E8);
         box.addView(applyCode);
 
-        wheel.setOnColorChanged(c -> preview.setBackgroundColor(c));
+        wheel.setOnColorChanged(c -> {
+            preview.setBackgroundColor(c);
+            hexNow.setText("当前 " + ColorCodes.hex(c));
+        });
         bright.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar sb, int p, boolean fromUser) {
                 wheel.setValue(Math.max(0.05f, p / 100f));
                 preview.setBackgroundColor(wheel.getColor());
+                hexNow.setText("当前 " + ColorCodes.hex(wheel.getColor()));
             }
 
             @Override
@@ -542,14 +552,15 @@ public class CountdownFullScreenActivity extends BaseActivity {
             }
         });
         applyCode.setOnClickListener(v -> {
-            int c = PantoneColors.parse(et.getText().toString());
+            int c = ColorCodes.parse(et.getText().toString());
             if (c == 0) {
-                toast("未识别的色号，请改用 #RRGGBB 或色盘");
+                toast("格式不对，HEX 写 #RRGGBB，RGB 写 255,87,51");
                 return;
             }
             wheel.setColor(c);
             bright.setProgress(Math.round(wheel.getValue() * 100f));
             preview.setBackgroundColor(wheel.getColor());
+            hexNow.setText("当前 " + ColorCodes.hex(wheel.getColor()));
         });
 
         ScrollView sv = new ScrollView(this);
