@@ -109,7 +109,8 @@ public final class MoriImporter {
                 int noteCount = NoteStore.get(act).importNotes(pkg.notes);
                 int cdCount = importCountdowns(act, pkg.countdowns);
                 int todoCount = importTodos(act, pkg.todos);
-                Toast.makeText(act, "已导入：" + summary(noteCount, cdCount, todoCount),
+                int fontCount = importFonts(act, pkg.fonts);
+                Toast.makeText(act, "已导入：" + summary(noteCount, cdCount, todoCount, fontCount),
                         Toast.LENGTH_LONG).show();
             }
         } catch (MoriFile.BadPasswordException e) {
@@ -154,8 +155,40 @@ public final class MoriImporter {
         return added;
     }
 
+    /** 导入字体库文件，重名自动加序号，不覆盖已有字体 */
+    private static int importFonts(Activity act, java.util.List<MoriFile.FontItem> list) {
+        if (list == null || list.isEmpty()) return 0;
+        java.io.File dir = FontImporter.fontDir(act);
+        if (dir == null) return 0;
+        int added = 0;
+        for (MoriFile.FontItem item : list) {
+            if (item == null || item.data == null || item.data.length == 0) continue;
+            String raw = item.name == null || item.name.trim().isEmpty() ? "font.ttf" : item.name;
+            String base = raw;
+            String ext = "";
+            int dot = raw.lastIndexOf('.');
+            if (dot > 0) {
+                base = raw.substring(0, dot);
+                ext = raw.substring(dot);
+            }
+            java.io.File target = new java.io.File(dir, base + ext);
+            int i = 2;
+            while (target.exists()) {
+                target = new java.io.File(dir, base + "-" + i + ext);
+                i++;
+            }
+            try (java.io.FileOutputStream out = new java.io.FileOutputStream(target)) {
+                out.write(item.data);
+                out.flush();
+                added++;
+            } catch (Exception ignored) {
+            }
+        }
+        if (added > 0) Fonts.clear();
+        return added;
+    }
     /** 拼接导入结果文案，跳过 0 项 */
-    private static String summary(int notes, int countdowns, int todos) {
+    private static String summary(int notes, int countdowns, int todos, int fonts) {
         StringBuilder sb = new StringBuilder();
         if (notes > 0) sb.append(notes).append(" 条笔记");
         if (countdowns > 0) {
@@ -165,6 +198,10 @@ public final class MoriImporter {
         if (todos > 0) {
             if (sb.length() > 0) sb.append("、");
             sb.append(todos).append(" 条待办");
+        }
+        if (fonts > 0) {
+            if (sb.length() > 0) sb.append("、");
+            sb.append(fonts).append(" 个字体");
         }
         if (sb.length() == 0) return "没有内容";
         return sb.toString();

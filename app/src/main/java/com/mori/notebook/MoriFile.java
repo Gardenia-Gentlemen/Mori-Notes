@@ -63,15 +63,25 @@ public final class MoriFile {
         }
     }
 
+    /** 备份里的一个字体文件（v2.1 起支持字体库备份）。 */
+    public static class FontItem {
+        public final String name;
+        public final byte[] data;
+        public FontItem(String name, byte[] data) {
+            this.name = name == null ? "font.ttf" : name;
+            this.data = data == null ? new byte[0] : data;
+        }
+    }
+
     /** 一次备份要包含的内容 */
     public static class Content {
         public final List<Note> notes = new ArrayList<>();
         public final List<Countdown> countdowns = new ArrayList<>();
         public final List<Todo> todos = new ArrayList<>();
+        public final List<FontItem> fonts = new ArrayList<>();
         public boolean includesPrivate;
-
         public int size() {
-            return notes.size() + countdowns.size() + todos.size();
+            return notes.size() + countdowns.size() + todos.size() + fonts.size();
         }
     }
 
@@ -84,9 +94,9 @@ public final class MoriFile {
         public final List<Note> notes = new ArrayList<>();
         public final List<Countdown> countdowns = new ArrayList<>();
         public final List<Todo> todos = new ArrayList<>();
-
+        public final List<FontItem> fonts = new ArrayList<>();
         public int total() {
-            return notes.size() + countdowns.size() + todos.size();
+            return notes.size() + countdowns.size() + todos.size() + fonts.size();
         }
     }
 
@@ -116,22 +126,32 @@ public final class MoriFile {
         for (Todo t : c.todos) {
             if (t != null) todos.put(t.toJson());
         }
+        JSONArray fonts = new JSONArray();
+        for (FontItem f : c.fonts) {
+            if (f == null || f.data.length == 0) continue;
+            JSONObject fo = new JSONObject();
+            fo.put("name", f.name);
+            fo.put("data", Base64.encodeToString(f.data, Base64.NO_WRAP));
+            fonts.put(fo);
+        }
 
         JSONObject payload = new JSONObject();
         payload.put("notes", notes);
         payload.put("countdowns", countdowns);
         payload.put("todos", todos);
-
+        payload.put("fonts", fonts);
         JSONObject counts = new JSONObject();
         counts.put("notes", notes.length());
         counts.put("countdowns", countdowns.length());
         counts.put("todos", todos.length());
+        counts.put("fonts", fonts.length());
 
         JSONObject sections = new JSONObject();
         sections.put("notes", notes.length() > 0);
         sections.put("private", c.includesPrivate);
         sections.put("countdown", countdowns.length() > 0);
         sections.put("todo", todos.length() > 0);
+        sections.put("font", fonts.length() > 0);
 
         JSONObject o = new JSONObject();
         o.put("magic", MAGIC);
@@ -228,6 +248,15 @@ public final class MoriFile {
         if (ta != null) {
             for (int i = 0; i < ta.length(); i++) {
                 pkg.todos.add(Todo.fromJson(ta.getJSONObject(i)));
+            }
+        }
+        JSONArray fa = obj.optJSONArray("fonts");
+        if (fa != null) {
+            for (int i = 0; i < fa.length(); i++) {
+                JSONObject fo = fa.getJSONObject(i);
+                String fn = fo.optString("name", "font-" + (i + 1) + ".ttf");
+                byte[] fd = Base64.decode(fo.optString("data", ""), Base64.NO_WRAP);
+                if (fd.length > 0) pkg.fonts.add(new FontItem(fn, fd));
             }
         }
         return pkg;

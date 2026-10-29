@@ -15,6 +15,7 @@ import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -44,6 +45,7 @@ public class FontsActivity extends BaseActivity {
     private RecyclerView list;
     private TextView empty;
     private FontAdapter adapter;
+    private MaterialToolbar toolbar;
 
     private ActivityResultLauncher<String[]> fontPicker;
     private ActivityResultLauncher<Intent> zipPicker;
@@ -55,8 +57,15 @@ public class FontsActivity extends BaseActivity {
         setContentView(R.layout.activity_fonts);
 
         MaterialToolbar tb = findViewById(R.id.toolbar);
+        toolbar = tb;
         tb.setTitle("字体");
-        tb.setNavigationOnClickListener(v -> finish());
+        tb.setNavigationOnClickListener(v -> {
+            if (adapter != null && adapter.isSelectMode()) {
+                adapter.setSelectMode(false);
+            } else {
+                finish();
+            }
+        });
         tb.inflateMenu(R.menu.menu_fonts);
         tb.setOnMenuItemClickListener(item -> {
             int id = item.getItemId();
@@ -72,12 +81,48 @@ public class FontsActivity extends BaseActivity {
                 exportZip();
                 return true;
             }
+            if (id == R.id.action_font_delete_selected) {
+                confirmDeleteSelected();
+                return true;
+            }
+            if (id == R.id.action_font_select_all) {
+                adapter.toggleSelectAll();
+                updateSelectUi(adapter.selectedCount());
+                return true;
+            }
             return false;
+        });
+
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (adapter != null && adapter.isSelectMode()) {
+                    adapter.setSelectMode(false);
+                } else {
+                    setEnabled(false);
+                    getOnBackPressedDispatcher().onBackPressed();
+                }
+            }
         });
 
         list = findViewById(R.id.recycler_fonts);
         empty = findViewById(R.id.tv_font_empty);
-        adapter = new FontAdapter(this::confirmDelete);
+        adapter = new FontAdapter(new FontAdapter.Listener() {
+            @Override
+            public void onDelete(File font) {
+                confirmDelete(font);
+            }
+
+            @Override
+            public void onPreview(File font) {
+                showPreview(font);
+            }
+
+            @Override
+            public void onSelectionChanged(int count) {
+                updateSelectUi(count);
+            }
+        });
         list.setLayoutManager(new LinearLayoutManager(this));
         list.setAdapter(adapter);
 
@@ -119,6 +164,7 @@ public class FontsActivity extends BaseActivity {
         boolean none = fonts.isEmpty();
         empty.setVisibility(none ? View.VISIBLE : View.GONE);
         list.setVisibility(none ? View.GONE : View.VISIBLE);
+        updateSelectUi(adapter.selectedCount());
     }
 
     /* ---------- 添加字体（支持多选） ---------- */
@@ -161,6 +207,102 @@ public class FontsActivity extends BaseActivity {
                         toast("删除失败");
                     }
                 })
+                .show();
+    }
+
+    /* ---------- 多选状态 ---------- */
+
+    private void updateSelectUi(int count) {
+        if (toolbar == null) return;
+        boolean on = adapter != null && adapter.isSelectMode();
+        toolbar.setTitle(on ? "已选 " + count + " 项" : "字体");
+        android.view.Menu menu = toolbar.getMenu();
+        if (menu == null) return;
+        android.view.MenuItem del = menu.findItem(R.id.action_font_delete_selected);
+        android.view.MenuItem all = menu.findItem(R.id.action_font_select_all);
+        if (del != null) del.setVisible(on && count > 0);
+        if (all != null) all.setVisible(on);
+        if (all != null) {
+            boolean allSel = on && adapter != null && count == adapter.getItemCount() && count > 0;
+            all.setTitle(allSel ? "取消全选" : "全选");
+        }
+        android.view.MenuItem add = menu.findItem(R.id.action_font_add);
+        android.view.MenuItem zipIn = menu.findItem(R.id.action_font_import_zip);
+        android.view.MenuItem zipOut = menu.findItem(R.id.action_font_export_zip);
+        if (add != null) add.setVisible(!on);
+        if (zipIn != null) zipIn.setVisible(!on);
+        if (zipOut != null) zipOut.setVisible(!on);
+    }
+
+    private void confirmDeleteSelected() {
+        if (adapter == null) return;
+        final List<File> files = adapter.selectedFiles();
+        if (files.isEmpty()) {
+            toast("请先选择字体");
+            return;
+        }
+        int used = 0;
+        List<Countdown> all = CountdownStore.get(this).getAll();
+        String defPath = CountdownPrefs.getFontPath(this);
+        boolean hitsDefault = false;
+        for (File f : files) {
+            String path = f.getAbsolutePath();
+            for (Countdown c : all) {
+                if (c.fontPath != null && c.fontPath.equals(path)) used++;
+            }
+            if (defPath != null && defPath.equals(path)) hitsDefault = true;
+        }
+        StringBuilder msg = new StringBuilder("共选中 ").append(files.size()).append(" 个字体");
+        if (used > 0) {
+            msg.append("\n有 ").append(used).append(" 个倒数日正在使用，删除后将回退系统字体");
+        }
+        if (hitsDefault) {
+            msg.append("\n其中包含全屏页当前默认字体");
+        }
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("删除所选字体")
+                .setMessage(msg.toString())
+                .setNegativeButton("取消", null)
+                .setPositiveButton("删除", (d, w) -> {
+                    int ok = 0;
+                    for (File f : files) {
+                        if (f.delete()) ok++;
+                    }
+                    Fonts.clear();
+                    adapter.setSelectMode(false);
+                    reload();
+                    if (ok == files.size()) toast("已删除 " + ok + " 个字体");
+                    else toast("已删除 " + ok + " 个，失败 " + (files.size() - ok) + " 个");
+                })
+                .show();
+    }
+
+    /* ---------- 预览 ---------- */
+
+    private void showPreview(File f) {
+        View v = getLayoutInflater().inflate(R.layout.dialog_font_preview, null, false);
+        TextView name = v.findViewById(R.id.tv_preview_name);
+        TextView meta = v.findViewById(R.id.tv_preview_meta);
+        TextView sample = v.findViewById(R.id.tv_preview_sample);
+        TextView numbers = v.findViewById(R.id.tv_preview_numbers);
+        TextView en = v.findViewById(R.id.tv_preview_en);
+
+        android.graphics.Typeface tf = Fonts.regular(this, f.getAbsolutePath());
+        name.setText(FontImporter.displayName(f));
+        String ext = f.getName().toLowerCase(Locale.ROOT);
+        int dot = ext.lastIndexOf('.');
+        if (dot > 0) ext = ext.substring(dot + 1);
+        meta.setText(ext.toUpperCase(Locale.ROOT) + " · " + Math.max(1, f.length() / 1024) + " KB");
+        sample.setText("还有 128 天就是新的一年\n愿你所有的期待都如期而至");
+        numbers.setText("2026-12-31 23:59");
+        en.setText("ABCDEFG abcdefg 0123456789");
+        for (TextView t : new TextView[]{name, sample, numbers, en}) {
+            t.setTypeface(tf);
+        }
+
+        new MaterialAlertDialogBuilder(this)
+                .setView(v)
+                .setNegativeButton("关闭", null)
                 .show();
     }
 

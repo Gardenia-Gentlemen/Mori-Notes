@@ -344,8 +344,9 @@ public class SettingsFragment extends Fragment {
         boolean priv;
         boolean countdowns;
         boolean todos;
+        boolean fonts;
         boolean any() {
-            return notes || priv || countdowns || todos;
+            return notes || priv || countdowns || todos || fonts;
         }
     }
     private void startExportMori() {
@@ -358,11 +359,14 @@ public class SettingsFragment extends Fragment {
         final android.widget.CheckBox cbPriv = checkBox("隐私笔记（需验证密码）");
         final android.widget.CheckBox cbCd = checkBox("倒数日");
         final android.widget.CheckBox cbTodo = checkBox("待办");
+        final android.widget.CheckBox cbFont = checkBox("字体库（自定义字体文件）");
         cbNotes.setChecked(true);
+        cbFont.setChecked(true);
         box.addView(cbNotes);
         box.addView(cbPriv);
         box.addView(cbCd);
         box.addView(cbTodo);
+        box.addView(cbFont);
         new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
                 .setTitle("选择要备份的内容")
                 .setView(box)
@@ -371,6 +375,7 @@ public class SettingsFragment extends Fragment {
                     sel.priv = cbPriv.isChecked();
                     sel.countdowns = cbCd.isChecked();
                     sel.todos = cbTodo.isChecked();
+                    sel.fonts = cbFont.isChecked();
                     if (!sel.any()) {
                         toast("请至少选择一项内容");
                         return;
@@ -486,6 +491,14 @@ public class SettingsFragment extends Fragment {
             content.todos.addAll(tds.getActive());
             content.todos.addAll(tds.getDone());
         }
+        if (sel.fonts) {
+            for (java.io.File f : FontImporter.list(requireContext())) {
+                byte[] bytes = readBytes(f);
+                if (bytes != null && bytes.length > 0) {
+                    content.fonts.add(new MoriFile.FontItem(f.getName(), bytes));
+                }
+            }
+        }
         if (content.size() == 0) {
             toast("没有可导出的内容");
             return;
@@ -512,6 +525,19 @@ public class SettingsFragment extends Fragment {
             toast("导出失败：" + e.getMessage());
         }
     }
+    /** 读取整机导出需要的字体文件字节；失败返回 null。 */
+    private static byte[] readBytes(java.io.File f) {
+        if (f == null || !f.isFile()) return null;
+        try (java.io.FileInputStream in = new java.io.FileInputStream(f);
+             java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream()) {
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = in.read(buf)) > 0) bos.write(buf, 0, n);
+            return bos.toByteArray();
+        } catch (Exception e) {
+            return null;
+        }
+    }
     /** 备份内容摘要文案 */
     private static String describe(MoriFile.Content c) {
         StringBuilder sb = new StringBuilder();
@@ -523,6 +549,10 @@ public class SettingsFragment extends Fragment {
         if (!c.todos.isEmpty()) {
             if (sb.length() > 0) sb.append("、");
             sb.append(c.todos.size()).append(" 条待办");
+        }
+        if (!c.fonts.isEmpty()) {
+            if (sb.length() > 0) sb.append("、");
+            sb.append(c.fonts.size()).append(" 个字体");
         }
         return sb.toString();
     }
