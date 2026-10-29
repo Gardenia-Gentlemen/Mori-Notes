@@ -11,7 +11,7 @@
         app:showAsAction="never" />
     <item
         android:id="@+id/action_share"
-        android:title="分享图片"
+        android:title="分享"
         app:showAsAction="never" />
     <item
         android:id="@+id/action_export"

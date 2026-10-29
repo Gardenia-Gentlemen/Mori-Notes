@@ -16,6 +16,7 @@ public final class CountdownPrefs {
     private static final String K_HOUR = "day_start_hour";
     private static final String K_BG = "card_bg_uri";
     private static final String K_MASK = "card_mask";
+    private static final String K_FONT = "fullscreen_font_path";
 
     private CountdownPrefs() {
     }
@@ -55,5 +56,18 @@ public final class CountdownPrefs {
 
     public static void setCardMask(Context c, int v) {
         sp(c).edit().putInt(K_MASK, Math.max(0, Math.min(80, v))).apply();
+    }
+
+    /** 全屏页自定义字体的本地文件绝对路径，空表示用系统字体。 */
+    public static String getFontPath(Context c) {
+        return sp(c).getString(K_FONT, null);
+    }
+
+    public static void setFontPath(Context c, String path) {
+        if (path == null || path.trim().isEmpty()) {
+            sp(c).edit().remove(K_FONT).apply();
+        } else {
+            sp(c).edit().putString(K_FONT, path).apply();
+        }
     }
 }

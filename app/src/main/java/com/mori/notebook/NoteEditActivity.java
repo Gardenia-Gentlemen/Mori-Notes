@@ -19,6 +19,7 @@ public class NoteEditActivity extends BaseActivity {
     private Note note;
     private NoteStore store;
     private android.widget.EditText et;
+    private android.widget.EditText etTitle;
     private android.widget.ScrollView previewScroll;
     private android.widget.TextView previewText;
     private boolean previewMode;
@@ -53,18 +54,23 @@ public class NoteEditActivity extends BaseActivity {
         previewScroll = findViewById(R.id.scroll_preview);
         previewText = findViewById(R.id.tv_preview);
         et.setText(note.content == null ? "" : note.content);
+        etTitle = findViewById(R.id.et_title);
+        etTitle.setText(note.title == null ? "" : note.title);
 
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         toolbar.inflateMenu(R.menu.menu_edit);
         toggleItem = toolbar.getMenu().findItem(R.id.action_toggle);
-        toolbar.setNavigationOnClickListener(v -> finish());
+        toolbar.setNavigationOnClickListener(v -> {
+            saveNote();
+            finish();
+        });
         toolbar.setOnMenuItemClickListener(item -> {
             if (item.getItemId() == R.id.action_toggle) {
                 setPreviewMode(!previewMode);
                 return true;
             }
             if (item.getItemId() == R.id.action_share) {
-                ShareUtils.shareAsImage(this, note);
+                showShareDialog();
                 return true;
             }
             if (item.getItemId() == R.id.action_export) {
@@ -83,6 +89,22 @@ public class NoteEditActivity extends BaseActivity {
         });
     }
 
+    /** 分享笔记：图片 / Markdown 文本 / 纯文本 */
+    private void showShareDialog() {
+        saveNote();
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("分享笔记")
+                .setItems(new String[]{"分享图片", "分享 Markdown 文本", "分享纯文本"}, (d, which) -> {
+                    if (which == 0) {
+                        ShareUtils.shareAsImage(this, note);
+                    } else if (which == 1) {
+                        ShareUtils.shareAsMarkdown(this, note);
+                    } else {
+                        ShareUtils.shareAsText(this, note);
+                    }
+                })
+                .show();
+    }
     private void showExportDialog() {
         new MaterialAlertDialogBuilder(this)
                 .setTitle("导出笔记")
@@ -168,26 +190,51 @@ public class NoteEditActivity extends BaseActivity {
     private void saveNote() {
         if (note == null) return;
         String content = et.getText().toString();
-        if (content.equals(note.content)) return;
+        String title = etTitle == null ? "" : etTitle.getText().toString().trim();
+        if (title.isEmpty()) {
+            title = deriveTitle(content);
+            if (etTitle != null && !title.isEmpty()) etTitle.setText(title);
+        }
+        if (title.isEmpty()) title = "无标题";
+        String oldTitle = note.title == null ? "" : note.title;
+        if (content.equals(note.content) && title.equals(oldTitle)) return;
         note.content = content;
-        note.title = deriveTitle(content);
+        note.title = title;
         note.updatedAt = System.currentTimeMillis();
         store.put(note);
     }
 
+    /** 标题为空时：取正文第一句（到句末标点或换行）作为标题 */
     private String deriveTitle(String content) {
+        if (content == null) return "";
         String[] lines = content.split("\n");
+        StringBuilder sb = new StringBuilder();
         for (String line : lines) {
             String t = line.trim();
             if (t.startsWith(String.valueOf((char)33) + String.valueOf((char)91)) && t.contains(String.valueOf((char)93) + String.valueOf((char)40))) continue;
-            t = t.replaceAll("^#{1,6}\\s*", "").replaceAll("[*_`~>]", "").trim();
-            if (!TextUtils.isEmpty(t)) {
-                return t.length() > 40 ? t.substring(0, 40) : t;
+            t = t.replaceAll("^#{1,6}\s*", "").replaceAll("[*_`~>]", "").trim();
+            if (TextUtils.isEmpty(t)) {
+                if (sb.length() > 0) break;
+                continue;
             }
+            sb.append(t);
+            int end = firstSentenceEnd(sb.toString());
+            if (end > 0) return sb.substring(0, end);
+            if (sb.length() > 40) break;
+            sb.append(' ');
         }
-        return "无标题";
+        String t = sb.toString().trim();
+        if (TextUtils.isEmpty(t)) return "";
+        return t.length() > 40 ? t.substring(0, 40) : t;
     }
-
+    /** 第一个句末标点之后的长度，没有则 -1 */
+    private static int firstSentenceEnd(String s) {
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == '。' || c == '！' || c == '？' || c == '；' || c == '!' || c == '?' || c == ';' || c == '.') return i + 1;
+        }
+        return -1;
+    }
     @Override
     protected void onPause() {
         saveNote();

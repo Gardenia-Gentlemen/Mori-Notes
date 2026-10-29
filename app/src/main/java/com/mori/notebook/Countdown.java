@@ -47,6 +47,8 @@ public class Countdown {
     public long createdAt = 0L;
     /** 该卡片自用背景图 uri，空则用全局设置。 */
     public String bgUri = "";
+    /** 该卡片专属字体文件绝对路径，空则用全局默认字体。 */
+    public String fontPath = "";
     /** 手动排序序号，越小越靠前；-1 表示未排序。 */
     public int sortIndex = -1;
 
@@ -81,6 +83,7 @@ public class Countdown {
             o.put("repeatAnchorDate", repeatAnchorDate);
             o.put("createdAt", createdAt);
             o.put("bgUri", bgUri == null ? "" : bgUri);
+            o.put("fontPath", fontPath == null ? "" : fontPath);
             o.put("sortIndex", sortIndex);
         } catch (Exception ignored) {
         }
@@ -105,6 +108,7 @@ public class Countdown {
         c.repeatAnchorDate = o.optLong("repeatAnchorDate", 0L);
         c.createdAt = o.optLong("createdAt", 0L);
         c.bgUri = o.optString("bgUri", "");
+        c.fontPath = o.optString("fontPath", "");
         c.sortIndex = o.optInt("sortIndex", -1);
         if (c.id.isEmpty()) {
             c.id = UUID.randomUUID().toString();

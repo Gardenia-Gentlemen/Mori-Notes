@@ -7,12 +7,14 @@
  */
 package com.mori.notebook;
 
+import android.content.Context;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.PopupMenu;
+import android.graphics.Typeface;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -41,8 +43,13 @@ public class CountdownAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
         /** 三点菜单中的「编辑」 */
         void onEdit(Countdown item);
 
+        /** 三点菜单中的「编辑字体」 */
+        void onImportFont(Countdown item);
+
         /** 多选态下选中项数量变化 */
         void onSelectionChanged();
+        /** 长按三点按钮开始拖拽排序 */
+        void onDragStart(RecyclerView.ViewHolder vh);
     }
 
     private static class Row {
@@ -195,6 +202,7 @@ public class CountdownAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
         }
         CardBg.apply(h.itemView.getContext(), c.bgUri, h.bg, h.scrim, h.title, h.date, h.anniv,
                 h.days, h.unit, h.defaultTitle, h.defaultSub, h.defaultHero);
+        applyFont(h, c);
         boolean sel = selectionMode && selected.contains(c.id);
         h.card.setOnClickListener(v -> {
             if (selectionMode) {
@@ -204,26 +212,36 @@ public class CountdownAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
                 listener.onClick(c);
             }
         });
-        if (selectionMode) {
-            h.card.setOnLongClickListener(v -> {
-                listener.onLongClick(c);
-                return true;
-            });
-        } else {
-            h.card.setOnLongClickListener(null);
-        }
+        h.card.setOnLongClickListener(v -> {
+            listener.onLongClick(c);
+            return true;
+        });
         h.menu.setVisibility(selectionMode ? View.GONE : View.VISIBLE);
         h.menu.setOnClickListener(v -> showMenu(v, c));
+        h.menu.setOnLongClickListener(selectionMode ? null : v -> {
+            listener.onDragStart(h);
+            return true;
+        });
         applySelectionStyle(h, sel);
     }
 
-    /** 右侧三点菜单，当前仅「编辑」一项 */
+    /** 右侧三点菜单：编辑、编辑字体 */
     private void showMenu(View anchor, final Countdown c) {
         PopupMenu pm = new PopupMenu(anchor.getContext(), anchor);
-        pm.getMenu().add(0, 1, 0, "编辑");
+        pm.getMenu().add(0, 3, 0, "分享图片");
+        pm.getMenu().add(0, 1, 1, "编辑");
+        pm.getMenu().add(0, 2, 2, "编辑字体");
         pm.setOnMenuItemClickListener(item -> {
             if (item.getItemId() == 1) {
                 listener.onEdit(c);
+                return true;
+            }
+            if (item.getItemId() == 2) {
+                listener.onImportFont(c);
+                return true;
+            }
+            if (item.getItemId() == 3) {
+                ShareUtils.shareCountdownAsImage(anchor.getContext(), c);
                 return true;
             }
             return false;
@@ -385,6 +403,19 @@ public class CountdownAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
         }
     }
 
+    /** 应用倒数日全屏页导入的自定义字体；无自定义字体时回退到布局默认。 */
+    private static void applyFont(ItemHolder h, Countdown c) {
+        Context ctx = h.itemView.getContext();
+        String path = c == null ? null : c.fontPath;
+        Typeface reg = Fonts.regular(ctx, path);
+        Typeface bold = Fonts.bold(ctx, path);
+        h.title.setTypeface(reg != null ? reg : h.tfTitle);
+        h.date.setTypeface(reg != null ? reg : h.tfDate);
+        h.unit.setTypeface(reg != null ? reg : h.tfUnit);
+        h.anniv.setTypeface(reg != null ? reg : h.tfAnniv);
+        h.days.setTypeface(bold != null ? bold : h.tfDays);
+    }
+
     static class ItemHolder extends RecyclerView.ViewHolder {
         final TextView title;
         final TextView date;
@@ -398,6 +429,11 @@ public class CountdownAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
         final int defaultTitle;
         final int defaultSub;
         final int defaultHero;
+        final Typeface tfTitle;
+        final Typeface tfDate;
+        final Typeface tfDays;
+        final Typeface tfUnit;
+        final Typeface tfAnniv;
 
         ItemHolder(View v) {
             super(v);
@@ -413,6 +449,11 @@ public class CountdownAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
             defaultTitle = title.getCurrentTextColor();
             defaultSub = date.getCurrentTextColor();
             defaultHero = days.getCurrentTextColor();
+            tfTitle = title.getTypeface();
+            tfDate = date.getTypeface();
+            tfDays = days.getTypeface();
+            tfUnit = unit.getTypeface();
+            tfAnniv = anniv.getTypeface();
         }
     }
 }

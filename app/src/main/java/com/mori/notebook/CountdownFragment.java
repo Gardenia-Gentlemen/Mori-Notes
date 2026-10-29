@@ -8,6 +8,7 @@
 package com.mori.notebook;
 
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -15,6 +16,8 @@ import android.view.ViewGroup;
 import android.widget.Toast;
 import java.util.List;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -30,11 +33,16 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 public class CountdownFragment extends Fragment {
 
     private CountdownStore store;
+    /** 当前等待导入字体的倒数日（来自卡片三点菜单）。 */
+    private Countdown pendingFontItem;
     private CountdownAdapter adapter;
+    private ItemTouchHelper dragHelper;
     private RecyclerView recycler;
     private View emptyView;
     /** 是否处于多选态 */
     private boolean selecting;
+    /** 字体文件选择器 */
+    private ActivityResultLauncher<Intent> fontPicker;
 
     @Nullable
     @Override
@@ -48,6 +56,30 @@ public class CountdownFragment extends Fragment {
         store = CountdownStore.get(requireContext());
         recycler = view.findViewById(R.id.recycler_countdown);
         emptyView = view.findViewById(R.id.empty_countdown);
+        fontPicker = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(), r -> {
+                    if (r.getResultCode() != android.app.Activity.RESULT_OK || r.getData() == null) {
+                        return;
+                    }
+                    Uri src = r.getData().getData();
+                    if (src == null || !isAdded()) {
+                        return;
+                    }
+                    Countdown target = pendingFontItem;
+                    pendingFontItem = null;
+                    if (target != null) {
+                        String path = FontImporter.importTo(requireContext(), src);
+                        if (path != null) {
+                            target.fontPath = path;
+                            store.put(target);
+                            store.reload();
+                            reload();
+                            toast("字体已应用到该条");
+                        }
+                    } else if (FontImporter.importFrom(requireContext(), src)) {
+                        reload();
+                    }
+                });
         adapter = new CountdownAdapter(new CountdownAdapter.Listener() {
             @Override
             public void onClick(Countdown item) {
@@ -61,8 +93,10 @@ public class CountdownFragment extends Fragment {
 
             @Override
             public void onLongClick(Countdown item) {
-                // 非多选态的长按交给拖拽排序；多选态下弹操作菜单
-                if (selecting) {
+                // 长按卡片：进入多选并选中该条；多选态下弹操作菜单
+                if (!selecting) {
+                    enterSelection(item);
+                } else {
                     showSelectionMenu();
                 }
             }
@@ -70,6 +104,16 @@ public class CountdownFragment extends Fragment {
             @Override
             public void onEdit(Countdown item) {
                 open(item);
+            }
+            @Override
+            public void onImportFont(Countdown item) {
+                showFontMenu(item);
+            }
+            @Override
+            public void onDragStart(RecyclerView.ViewHolder vh) {
+                if (dragHelper != null && !selecting) {
+                    dragHelper.startDrag(vh);
+                }
             }
 
             @Override
@@ -122,12 +166,24 @@ public class CountdownFragment extends Fragment {
             enterSelection(null);
             return true;
         }
+        if (id == R.id.action_save_image) {
+            saveAllImage();
+            return true;
+        }
+        if (id == R.id.action_share_image) {
+            shareAllImage();
+            return true;
+        }
         if (id == R.id.action_settings) {
             startActivity(new Intent(requireContext(), SettingsActivity.class));
             return true;
         }
         if (id == R.id.action_select_all) {
             selectAll();
+            return true;
+        }
+        if (id == R.id.action_sel_save) {
+            batchSave();
             return true;
         }
         if (id == R.id.action_sel_share) {
@@ -195,16 +251,58 @@ public class CountdownFragment extends Fragment {
         }
         new MaterialAlertDialogBuilder(requireContext())
                 .setTitle(selectTitle())
-                .setItems(new String[]{"全选", "分享所选", "删除所选"}, (d, which) -> {
+                .setItems(new String[]{"全选", "保存所选", "分享所选", "删除所选"}, (d, which) -> {
                     if (which == 0) {
                         selectAll();
                     } else if (which == 1) {
+                        batchSave();
+                    } else if (which == 2) {
                         batchShare();
                     } else {
                         batchDelete();
                     }
                 })
                 .show();
+    }
+
+    /** 主页：把全部倒数日卡片保存为图片 */
+    private void saveAllImage() {
+        if (store == null) {
+            return;
+        }
+        List<Countdown> all = store.getAll();
+        if (all == null || all.isEmpty()) {
+            toast("还没有倒数日");
+            return;
+        }
+        ShareUtils.saveCountdownsImage(requireContext(), all);
+    }
+
+    /** 主页：把全部倒数日卡片分享为一张长图 */
+    private void shareAllImage() {
+        if (store == null) {
+            return;
+        }
+        List<Countdown> all = store.getAll();
+        if (all == null || all.isEmpty()) {
+            toast("还没有倒数日");
+            return;
+        }
+        ShareUtils.shareCountdownsAsImage(requireContext(), all);
+    }
+
+    /** 保存所选倒数日卡片为图片 */
+    private void batchSave() {
+        if (adapter == null) {
+            return;
+        }
+        List<Countdown> sel = adapter.selectedCountdowns();
+        if (sel.isEmpty()) {
+            toast("请选择倒数日");
+            return;
+        }
+        ShareUtils.saveCountdownsImage(requireContext(), sel);
+        exitSelection();
     }
 
     /** 分享所选倒数日为一张长图 */
@@ -276,6 +374,11 @@ public class CountdownFragment extends Fragment {
         ItemTouchHelper helper = new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(
                 ItemTouchHelper.UP | ItemTouchHelper.DOWN, 0) {
             @Override
+            public boolean isLongPressDragEnabled() {
+                // 卡片长按已用于进入多选，拖拽改由长按右侧三点按钮触发
+                return false;
+            }
+            @Override
             public int getMovementFlags(@NonNull RecyclerView rv,
                                         @NonNull RecyclerView.ViewHolder vh) {
                 if (selecting || adapter.itemAt(vh.getBindingAdapterPosition()) == null) {
@@ -309,6 +412,7 @@ public class CountdownFragment extends Fragment {
                 }
             }
         });
+        dragHelper = helper;
         helper.attachToRecyclerView(recycler);
     }
 
@@ -326,6 +430,13 @@ public class CountdownFragment extends Fragment {
     }
 
     @Override
+    public void onPause() {
+        super.onPause();
+        if (selecting) {
+            exitSelection();
+        }
+    }
+    @Override
     public void onResume() {
         super.onResume();
         if (store != null) {
@@ -333,6 +444,44 @@ public class CountdownFragment extends Fragment {
         }
         reload();
         applyToolbar();
+    }
+
+    /** 编辑该条倒数日的字体：跟随系统默认、从字体库选、或导入新字体。 */
+    private void showFontMenu(final Countdown item) {
+        final java.util.List<java.io.File> fonts = FontImporter.list(requireContext());
+        final String[] labels = new String[fonts.size() + 2];
+        labels[0] = "跟随默认字体";
+        for (int i = 0; i < fonts.size(); i++) {
+            labels[i + 1] = FontImporter.displayName(fonts.get(i));
+        }
+        labels[labels.length - 1] = "导入新字体…";
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle("编辑字体")
+                .setItems(labels, (d, which) -> {
+                    if (which == labels.length - 1) {
+                        pendingFontItem = item;
+                        pickFont();
+                        return;
+                    }
+                    item.fontPath = which == 0 ? "" : fonts.get(which - 1).getAbsolutePath();
+                    store.put(item);
+                    store.reload();
+                    reload();
+                    toast(which == 0 ? "已恢复默认字体" : "字体已更新");
+                })
+                .show();
+    }
+    /** 选择本地字体文件（ttf / otf / ttc）并导入，列表卡片立即刷新。 */
+    private void pickFont() {
+        if (fontPicker == null) {
+            toast("字体选择器不可用");
+            return;
+        }
+        try {
+            fontPicker.launch(FontImporter.pickIntent());
+        } catch (Exception e) {
+            toast("无法打开文件选择器");
+        }
     }
 
     private void toast(String s) {

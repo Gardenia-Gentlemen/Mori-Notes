@@ -43,6 +43,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -75,6 +76,9 @@ public class CountdownFullScreenActivity extends BaseActivity {
         }
     };
     private ActivityResultLauncher<Intent> bgPicker;
+    private ActivityResultLauncher<Intent> fontPicker;
+    private Typeface fontNormal;
+    private Typeface fontBold;
     private int onSurfaceC = 0xFF1C1B1F;
     private int onVariantC = 0xFF49454F;
 
@@ -106,6 +110,13 @@ public class CountdownFullScreenActivity extends BaseActivity {
                     CountdownStore.get(this).put(item);
                     refreshBg();
                     toast("背景已更新");
+                });
+        fontPicker = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(), r -> {
+                    Intent data = r.getData();
+                    Uri src = data == null ? null : data.getData();
+                    if (src == null) return;
+                    importFont(src);
                 });
         String id = getIntent().getStringExtra("countdown_id");
         item = id == null ? null : CountdownStore.get(this).find(id);
@@ -321,6 +332,7 @@ public class CountdownFullScreenActivity extends BaseActivity {
 
         setContentView(root);
         refreshBg();
+        applyTypeface();
     }
 
     /** 应用背景并按需切换系统栏图标颜色。 */
@@ -376,6 +388,11 @@ public class CountdownFullScreenActivity extends BaseActivity {
         pm.getMenu().add(0, 2, 1, "更改标题");
         pm.getMenu().add(0, 3, 2, "保存图片");
         pm.getMenu().add(0, 5, 3, "分享图片");
+        pm.getMenu().add(0, 6, 5, "导入自定义字体");
+        pm.getMenu().add(0, 8, 6, "选择字体");
+        if (!TextUtils.isEmpty(item.fontPath)) {
+            pm.getMenu().add(0, 7, 7, "恢复默认字体");
+        }
         if (!TextUtils.isEmpty(item.bgUri)) {
             pm.getMenu().add(0, 4, 4, "移除背景图");
         }
@@ -395,6 +412,15 @@ public class CountdownFullScreenActivity extends BaseActivity {
                     return true;
                 case 5:
                     sharePicture();
+                    return true;
+                case 6:
+                    pickFont();
+                    return true;
+                case 7:
+                    resetFont();
+                    return true;
+                case 8:
+                    chooseFont();
                     return true;
                 default:
                     return false;
@@ -528,6 +554,73 @@ public class CountdownFullScreenActivity extends BaseActivity {
         } catch (Exception e) {
             toast("没有可用的分享应用");
         }
+    }
+
+    /** 选择本地字体文件（ttf / otf / ttc）。 */
+    private void pickFont() {
+        if (fontPicker == null) return;
+        try {
+            fontPicker.launch(FontImporter.pickIntent());
+        } catch (Exception e) {
+            toast("无法打开文件选择器");
+        }
+    }
+
+    /** 导入字体并绑定到当前这条倒数日。 */
+    private void importFont(Uri uri) {
+        String path = FontImporter.importTo(this, uri);
+        if (path == null) return;
+        item.fontPath = path;
+        CountdownStore.get(this).put(item);
+        applyTypeface();
+        toast("字体已应用");
+    }
+
+    /** 从字体库里为当前这条倒数日选择字体。 */
+    private void chooseFont() {
+        final java.util.List<File> fonts = FontImporter.list(this);
+        if (fonts.isEmpty()) {
+            toast("字体库为空，请先导入字体");
+            return;
+        }
+        String[] labels = new String[fonts.size() + 1];
+        labels[0] = "跟随默认字体";
+        for (int i = 0; i < fonts.size(); i++) {
+            labels[i + 1] = FontImporter.displayName(fonts.get(i));
+        }
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("选择字体")
+                .setItems(labels, (d, which) -> {
+                    item.fontPath = which == 0 ? "" : fonts.get(which - 1).getAbsolutePath();
+                    CountdownStore.get(this).put(item);
+                    applyTypeface();
+                    toast("字体已更新");
+                })
+                .show();
+    }
+
+    /** 读取已保存字体，失效时静默回退系统字体。 */
+    private void applyTypeface() {
+        Typeface tf = Fonts.regular(this, item.fontPath);
+        Typeface tb = Fonts.bold(this, item.fontPath);
+        fontNormal = tf == null ? Typeface.DEFAULT : tf;
+        fontBold = tb == null ? Typeface.DEFAULT_BOLD : tb;
+        if (titleView != null) titleView.setTypeface(fontNormal, Typeface.NORMAL);
+        if (daysView != null) daysView.setTypeface(fontBold, Typeface.BOLD);
+        if (unitView != null) unitView.setTypeface(fontNormal, Typeface.NORMAL);
+        if (dateView != null) dateView.setTypeface(fontNormal, Typeface.NORMAL);
+        if (lunarView != null) lunarView.setTypeface(fontNormal, Typeface.NORMAL);
+        if (annivView != null) annivView.setTypeface(fontNormal, Typeface.NORMAL);
+        if (clockView != null) clockView.setTypeface(fontNormal, Typeface.NORMAL);
+        if (noteView != null) noteView.setTypeface(fontNormal, Typeface.NORMAL);
+    }
+
+    /** 恢复默认字体（仅解绑本条，字体库文件保留）。 */
+    private void resetFont() {
+        item.fontPath = "";
+        CountdownStore.get(this).put(item);
+        applyTypeface();
+        toast("已恢复默认字体");
     }
 
     @Override

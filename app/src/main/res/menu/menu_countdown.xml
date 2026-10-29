@@ -6,6 +6,14 @@
         android:title="新建"
         app:showAsAction="always" />
     <item
+        android:id="@+id/action_save_image"
+        android:title="保存图片"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_share_image"
+        android:title="分享图片"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/action_select"
         android:title="多选"
         app:showAsAction="never" />

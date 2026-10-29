@@ -6,6 +6,10 @@
         android:title="全选"
         app:showAsAction="never" />
     <item
+        android:id="@+id/action_sel_save"
+        android:title="保存所选"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/action_sel_share"
         android:title="分享所选"
         app:showAsAction="never" />
