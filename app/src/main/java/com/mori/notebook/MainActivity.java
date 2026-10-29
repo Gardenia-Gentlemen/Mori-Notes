@@ -122,6 +122,13 @@ public class MainActivity extends BaseActivity {
             toolbar.setTitle(R.string.app_name);
         }
     }
+    /** Whether the given fragment is the page currently shown by the pager. */
+    public boolean isCurrentPage(Fragment f) {
+        if (pager == null || f == null) return false;
+        Fragment cur = getSupportFragmentManager().findFragmentByTag("f" + pager.getCurrentItem());
+        return cur == f;
+    }
+
     /** 把外部打开的文件转交给主页 */
     private void deliverOpenIntent(Intent intent) {
         if (!MoriImporter.isOpenFileIntent(intent)) return;

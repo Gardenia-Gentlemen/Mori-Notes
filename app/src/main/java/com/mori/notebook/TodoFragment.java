@@ -71,6 +71,10 @@ public class TodoFragment extends Fragment {
 
     /** 顶栏菜单（清除已完成） */
     public void applyToolbar() {
+        if (getActivity() instanceof MainActivity
+                && !((MainActivity) getActivity()).isCurrentPage(this)) {
+            return;
+        }
         if (!isAdded() || getView() == null) return;
         MaterialToolbar tb = requireActivity().findViewById(R.id.toolbar);
         if (tb == null) return;

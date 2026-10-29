@@ -137,6 +137,10 @@ public class CountdownFragment extends Fragment {
 
     /** 顶栏菜单：普通态为新建/多选/设置，多选态为全选/分享/删除/退出 */
     public void applyToolbar() {
+        if (getActivity() instanceof MainActivity
+                && !((MainActivity) getActivity()).isCurrentPage(this)) {
+            return;
+        }
         if (!isAdded() || getView() == null) {
             return;
         }

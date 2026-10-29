@@ -97,6 +97,10 @@ public class HomeFragment extends Fragment {
 
     /** 顶栏菜单随多选状态切换 */
     public void applyToolbar() {
+        if (getActivity() instanceof MainActivity
+                && !((MainActivity) getActivity()).isCurrentPage(this)) {
+            return;
+        }
         if (!isAdded() || getView() == null) return;
         MaterialToolbar tb = requireActivity().findViewById(R.id.toolbar);
         if (tb == null) return;
