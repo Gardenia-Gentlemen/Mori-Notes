@@ -6,7 +6,6 @@
  * 依据 MIT License 使用，许可全文见项目根目录 LICENSE-KIPPU_Trace。
  */
 package com.mori.notebook;
-import android.app.DatePickerDialog;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.text.InputType;
@@ -214,15 +213,56 @@ public class CountdownEditActivity extends BaseActivity {
                 .setInterpolator(new DecelerateInterpolator()).start(), 80);
     }
 
+    /** 公历选择器：年 / 月 / 日三列滚动，交互与农历选择器保持一致。 */
     private void pickDate() {
         int[] a = CountdownTime.ymd(pickedDate);
-        DatePickerDialog d = new DatePickerDialog(this, (view, y, m, day) -> {
-            pickedDate = CountdownTime.millisOf(y, m + 1, day);
-            refreshDateText();
-        }, a[0], a[1] - 1, a[2]);
-        d.show();
+        final android.widget.NumberPicker npY = new android.widget.NumberPicker(this);
+        npY.setMinValue(1900);
+        npY.setMaxValue(2100);
+        npY.setValue(a[0]);
+        npY.setFormatter(v -> v + "年");
+        final android.widget.NumberPicker npM = new android.widget.NumberPicker(this);
+        npM.setMinValue(1);
+        npM.setMaxValue(12);
+        npM.setValue(a[1]);
+        npM.setFormatter(v -> v + "月");
+        final android.widget.NumberPicker npD = new android.widget.NumberPicker(this);
+        npD.setMinValue(1);
+        npD.setMaxValue(31);
+        npD.setFormatter(v -> v + "日");
+        final Runnable syncD = () -> {
+            int max = CountdownTime.daysInMonth(npY.getValue(), npM.getValue());
+            if (max < 1) max = 31;
+            int cur = npD.getValue();
+            npD.setDisplayedValues(null);
+            npD.setMinValue(1);
+            npD.setMaxValue(max);
+            npD.setValue(Math.min(cur, max));
+        };
+        syncD.run();
+        npD.setValue(Math.min(a[2], npD.getMaxValue()));
+        npY.setOnValueChangedListener((p, o, nv) -> syncD.run());
+        npM.setOnValueChangedListener((p, o, nv) -> syncD.run());
+        android.widget.LinearLayout box = new android.widget.LinearLayout(this);
+        box.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+        int pad = (int) dp(20);
+        box.setPadding(pad, (int) dp(8), pad, 0);
+        box.addView(npY, new android.widget.LinearLayout.LayoutParams(0,
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        box.addView(npM, new android.widget.LinearLayout.LayoutParams(0,
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        box.addView(npD, new android.widget.LinearLayout.LayoutParams(0,
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("按公历选择")
+                .setView(box)
+                .setNegativeButton("取消", null)
+                .setPositiveButton("确定", (d, w) -> {
+                    pickedDate = CountdownTime.millisOf(npY.getValue(), npM.getValue(), npD.getValue());
+                    refreshDateText();
+                })
+                .show();
     }
-
     private void refreshDateText() {
         long today = CountdownTime.today();
         long diff = CountdownTime.dayDiff(today, pickedDate);
