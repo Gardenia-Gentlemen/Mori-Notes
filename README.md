@@ -53,7 +53,6 @@ gradle assembleRelease
 
 ## 鸣谢
 - 倒数日页最初的设计与交互参考 [TimeTrace（KIPPU_Trace）](https://github.com/KIPPUDESU/KIPPU_Trace)，作者切符；依据 MIT License 使用，许可全文见 [LICENSE-KIPPU_Trace](LICENSE-KIPPU_Trace)。
-- 倒数日页后续的新功能非原作者开发，，出现bug请勿在原作者提交Issues
 
 ## 许可
 
