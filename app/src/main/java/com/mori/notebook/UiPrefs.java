@@ -60,6 +60,14 @@ public class UiPrefs {
         }
     }
 
+    private static final String K_START_PAGE = "start_page";
+    /** 启动页：0=倒数日 1=记事本 2=待办，默认 1 */
+    public static int getStartPage(Context c) {
+        return sp(c).getInt(K_START_PAGE, 1);
+    }
+    public static void setStartPage(Context c, int v) {
+        sp(c).edit().putInt(K_START_PAGE, v).apply();
+    }
     private static final String K_THEME = "theme_mode";
     public static int getThemeMode(Context c) {
         return sp(c).getInt(K_THEME, 0);

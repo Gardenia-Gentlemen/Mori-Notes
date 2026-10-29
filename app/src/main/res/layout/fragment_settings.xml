@@ -27,6 +27,54 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:text="主页"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="打开应用时默认显示的页面"
+                        android:textSize="13sp" />
+                    <RadioGroup
+                        android:id="@+id/rg_start_page"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:orientation="vertical">
+                        <com.google.android.material.radiobutton.MaterialRadioButton
+                            android:id="@+id/radio_start_notes"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="记事本" />
+                        <com.google.android.material.radiobutton.MaterialRadioButton
+                            android:id="@+id/radio_start_todo"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="待办" />
+                        <com.google.android.material.radiobutton.MaterialRadioButton
+                            android:id="@+id/radio_start_countdown"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="倒数日" />
+                    </RadioGroup>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="?attr/colorSurfaceContainerHigh">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="18dp">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
                         android:text="@string/appearance"
                         android:textSize="16sp"
                         android:textStyle="bold" />

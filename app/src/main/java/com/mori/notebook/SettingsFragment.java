@@ -130,6 +130,18 @@ public class SettingsFragment extends Fragment {
         super.onViewCreated(v, savedInstanceState);
 
         bindCountdownCard(v);
+        RadioGroup rgStart = v.findViewById(R.id.rg_start_page);
+        int sp = UiPrefs.getStartPage(requireContext());
+        rgStart.check(sp == 0 ? R.id.radio_start_countdown
+                : sp == 2 ? R.id.radio_start_todo : R.id.radio_start_notes);
+        rgStart.setOnCheckedChangeListener((group, checkedId) -> {
+            int page = checkedId == R.id.radio_start_countdown ? 0
+                    : checkedId == R.id.radio_start_todo ? 2 : 1;
+            if (page == UiPrefs.getStartPage(requireContext())) return;
+            UiPrefs.setStartPage(requireContext(), page);
+            toast("下次打开应用生效");
+        });
+
         RadioGroup rg = v.findViewById(R.id.rg_theme);
         int mode = UiPrefs.getThemeMode(requireContext());
         rg.check(mode == 1 ? R.id.radio_light : mode == 2 ? R.id.radio_dark : R.id.radio_follow);

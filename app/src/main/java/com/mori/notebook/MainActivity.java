@@ -68,10 +68,11 @@ public class MainActivity extends BaseActivity {
                 updateToolbar(position);
             }
         });
-        // 启动直接落在主页（不再使用底栏菜单默认选中的倒数日）
-        pager.setCurrentItem(PAGE_HOME, false);
-        nav.setSelectedItemId(R.id.action_nav_home);
-        updateToolbar(PAGE_HOME);
+        // 启动页由设置决定，默认主页（记事本）
+        int startPage = UiPrefs.getStartPage(this);
+        pager.setCurrentItem(startPage, false);
+        nav.setSelectedItemId(navIdOf(startPage));
+        updateToolbar(startPage);
         deliverOpenIntent(getIntent());
     }
     /** 底栏透明，图标/文字取当前主题色，切深色模式后同步。 */
@@ -159,8 +160,9 @@ public class MainActivity extends BaseActivity {
     @Override
     public void onBackPressed() {
         if (homeFragment != null && homeFragment.isAdded() && homeFragment.handleBack()) return;
-        if (pager.getCurrentItem() != PAGE_HOME) {
-            pager.setCurrentItem(PAGE_HOME, true);
+        int startPage = UiPrefs.getStartPage(this);
+        if (pager.getCurrentItem() != startPage) {
+            pager.setCurrentItem(startPage, true);
             return;
         }
         super.onBackPressed();
