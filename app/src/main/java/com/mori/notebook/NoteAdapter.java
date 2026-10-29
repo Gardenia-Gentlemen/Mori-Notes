@@ -32,6 +32,18 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.VH> {
     private final List<Note> data = new ArrayList<>();
     private final Listener listener;
     private final SimpleDateFormat fmt = new SimpleDateFormat("MM-dd HH:mm", Locale.getDefault());
+    private final java.util.HashMap<String, String> previewCache = new java.util.HashMap<>();
+
+    private String previewFor(Note n, String kind) {
+        String key = kind + "#" + (n.id == null ? "" : n.id) + "#"
+                + (n.content == null ? 0 : n.content.hashCode());
+        String v = previewCache.get(key);
+        if (v != null) return v;
+        if (previewCache.size() > 300) previewCache.clear();
+        v = "m".equals(kind) ? mindPreview(n.content) : markdownPreview(n.content);
+        previewCache.put(key, v);
+        return v;
+    }
     private boolean grid;
     /** 多选模式 */
     private boolean selectionMode;
@@ -125,12 +137,12 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.VH> {
                 ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
         if (n.type == 1) {
             h.type.setText("思维");
-            h.preview.setText(mindPreview(n.content));
+            h.preview.setText(previewFor(n, "m"));
         } else {
             h.type.setText("笔记");
-            h.preview.setText(markdownPreview(n.content));
+            h.preview.setText(previewFor(n, "n"));
         }
-        h.meta.setText(fmt.format(new Date(n.updatedAt)));
+        h.meta.setText(fmt.format(n.updatedAt));
         boolean sel = selectionMode && selectedIds.contains(n.id);
         if (h.itemView instanceof com.google.android.material.card.MaterialCardView) {
             com.google.android.material.card.MaterialCardView card =

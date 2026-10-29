@@ -75,6 +75,7 @@ public class PrivateNotesActivity extends BaseActivity {
             }
         });
         recycler.setAdapter(adapter);
+        recycler.setHasFixedSize(true);
         recycler.setLayoutManager(new LinearLayoutManager(this));
 
         fab.setOnClickListener(v -> new MaterialAlertDialogBuilder(this)

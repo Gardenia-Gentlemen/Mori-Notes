@@ -47,6 +47,9 @@ public class MindMapView extends View {
     private final TextPaint tp = new TextPaint(Paint.ANTI_ALIAS_FLAG);
     private final Path path = new Path();
     private final RectF tmp = new RectF();
+    private final RectF barRect = new RectF();
+    private final Paint.FontMetrics fmTmp = new Paint.FontMetrics();
+    private final Map<MindNode, String> labelCache = new HashMap<>();
 
     private float density;
     private float rowH;
@@ -196,6 +199,7 @@ public class MindMapView extends View {
     private void layoutAll() {
         rects.clear();
         depths.clear();
+        labelCache.clear();
         branchIdx.clear();
         sideOf.clear();
         widths.clear();
@@ -442,8 +446,8 @@ public class MindMapView extends View {
             fill.clearShadowLayer();
             stroke.setColor(color);
             stroke.setAlpha(d == 1 ? 255 : 150);
-            RectF bar = new RectF(r.left, r.top + 3 * density, r.left + 3.4f * density, r.bottom - 3 * density);
-            canvas.drawRoundRect(bar, 1.7f * density, 1.7f * density, stroke);
+            barRect.set(r.left, r.top + 3 * density, r.left + 3.4f * density, r.bottom - 3 * density);
+            canvas.drawRoundRect(barRect, 1.7f * density, 1.7f * density, stroke);
             stroke.setAlpha(255);
         }
         tp.setTextSize(textSizeFor(d));
@@ -452,9 +456,14 @@ public class MindMapView extends View {
         String t = n.text == null ? "" : n.text.toString().trim();
         if (t.isEmpty()) t = "（空）";
         float inner = padX + (d == 0 ? 0 : 4 * density);
-        String label = TextUtils.ellipsize(t, tp, Math.max(1f, r.width() - inner * 2f), TextUtils.TruncateAt.END).toString();
-        Paint.FontMetrics fm = tp.getFontMetrics();
-        float baseline = r.centerY() - (fm.ascent + fm.descent) / 2f;
+        String label = labelCache.get(n);
+        if (label == null) {
+            label = TextUtils.ellipsize(t, tp, Math.max(1f, r.width() - inner * 2f),
+                    TextUtils.TruncateAt.END).toString();
+            labelCache.put(n, label);
+        }
+        tp.getFontMetrics(fmTmp);
+        float baseline = r.centerY() - (fmTmp.ascent + fmTmp.descent) / 2f;
         canvas.drawText(label, r.centerX(), baseline, tp);
         tp.setFakeBoldText(false);
     }

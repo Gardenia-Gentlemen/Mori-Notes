@@ -123,6 +123,7 @@ public class CountdownFragment extends Fragment {
         });
         recycler.setLayoutManager(new LinearLayoutManager(requireContext()));
         recycler.setAdapter(adapter);
+        recycler.setHasFixedSize(true);
         attachDragSort();
         View credit = view.findViewById(R.id.tv_credit_kippu);
         if (credit != null) {

@@ -106,9 +106,19 @@ public class BackgroundPrefs {
         root.setBackground(drawable(context));
     }
 
+    private static Bitmap imgCache;
+    private static String imgKey;
+
+    private static Drawable bitmapDrawable(Context context, Bitmap bmp) {
+        BitmapDrawable bd = new BitmapDrawable(context.getResources(), bmp);
+        bd.setGravity(android.view.Gravity.FILL);
+        return bd;
+    }
+
     private static Drawable imageDrawable(Context context) {
         String s = getImageUri(context);
         if (s == null) return null;
+        if (imgCache != null && s.equals(imgKey)) return bitmapDrawable(context, imgCache);
         try {
             Uri uri = Uri.parse(s);
             BitmapFactory.Options o = new BitmapFactory.Options();
@@ -125,9 +135,9 @@ public class BackgroundPrefs {
                 bmp = BitmapFactory.decodeStream(in, null, o2);
             }
             if (bmp == null) return null;
-            BitmapDrawable bd = new BitmapDrawable(context.getResources(), bmp);
-            bd.setGravity(android.view.Gravity.FILL);
-            return bd;
+            imgCache = bmp;
+            imgKey = s;
+            return bitmapDrawable(context, bmp);
         } catch (Exception e) {
             return null;
         }

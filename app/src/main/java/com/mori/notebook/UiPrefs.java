@@ -13,20 +13,35 @@ public class UiPrefs {
         return c.getSharedPreferences(P, Context.MODE_PRIVATE);
     }
 
+    private static Boolean cBold;
+    private static Float cScale;
+
     public static boolean isHomeTitleBold(Context c) {
-        return sp(c).getBoolean(K_BOLD, true);
+        Boolean v = cBold;
+        if (v == null) {
+            v = sp(c).getBoolean(K_BOLD, true);
+            cBold = v;
+        }
+        return v;
     }
 
     public static void setHomeTitleBold(Context c, boolean v) {
+        cBold = v;
         sp(c).edit().putBoolean(K_BOLD, v).apply();
     }
 
     /** 标题字号倍率，范围 0.9 ~ 1.3 */
     public static float getHomeTitleScale(Context c) {
-        return sp(c).getFloat(K_SCALE, 1.0f);
+        Float v = cScale;
+        if (v == null) {
+            v = sp(c).getFloat(K_SCALE, 1.0f);
+            cScale = v;
+        }
+        return v;
     }
 
     public static void setHomeTitleScale(Context c, float v) {
+        cScale = v;
         sp(c).edit().putFloat(K_SCALE, v).apply();
     }
 

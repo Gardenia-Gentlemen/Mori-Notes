@@ -67,13 +67,12 @@ public class CountdownFullScreenActivity extends BaseActivity {
     private TextView hintView;
     private TextView menuView;
     private final Handler clockHandler = new Handler(Looper.getMainLooper());
+    private final SimpleDateFormat clockFmt =
+            new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
     private final Runnable clockTick = new Runnable() {
         @Override
         public void run() {
-            if (clockView != null) {
-                clockView.setText(new SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-                        .format(new Date()));
-            }
+            if (clockView != null) clockView.setText(clockFmt.format(new Date()));
             clockHandler.postDelayed(this, 1000L);
         }
     };

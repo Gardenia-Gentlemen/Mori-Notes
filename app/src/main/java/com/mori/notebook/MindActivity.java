@@ -96,6 +96,7 @@ public class MindActivity extends BaseActivity {
             }
         });
         recycler.setAdapter(adapter);
+        recycler.setHasFixedSize(true);
         adapter.setData(roots);
         mindMap.setRoots(roots);
         mindMap.setOnNodeTapListener(this::showNodeMenu);

@@ -50,6 +50,7 @@ public class TrashActivity extends BaseActivity {
         recycler = findViewById(R.id.recycler);
         tvEmpty = findViewById(R.id.tv_empty);
         recycler.setLayoutManager(new LinearLayoutManager(this));
+        recycler.setHasFixedSize(true);
         adapter = new Adapter();
         recycler.setAdapter(adapter);
         reload();

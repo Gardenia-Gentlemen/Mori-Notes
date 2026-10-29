@@ -74,6 +74,7 @@ public class HomeFragment extends Fragment {
             }
         });
         recycler.setAdapter(adapter);
+        recycler.setHasFixedSize(true);
         applyLayoutMode();
         attachPull(recycler);
         View root = requireActivity().findViewById(R.id.root);
@@ -165,10 +166,15 @@ public class HomeFragment extends Fragment {
         toast(grid ? "已切换为宫格模式" : "已切换为列表模式");
     }
 
+    private Boolean layoutGridApplied;
+
     private void applyLayoutMode() {
         if (adapter == null || recycler == null) return;
         boolean grid = UiPrefs.isGridMode(requireContext());
         adapter.setGrid(grid);
+        if (recycler.getLayoutManager() != null
+                && layoutGridApplied != null && layoutGridApplied == grid) return;
+        layoutGridApplied = grid;
         recycler.setLayoutManager(grid
                 ? new GridLayoutManager(requireContext(), 2)
                 : new LinearLayoutManager(requireContext()));

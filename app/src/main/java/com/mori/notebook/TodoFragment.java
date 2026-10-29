@@ -60,6 +60,7 @@ public class TodoFragment extends Fragment {
         });
         recycler.setLayoutManager(new LinearLayoutManager(requireContext()));
         recycler.setAdapter(adapter);
+        recycler.setHasFixedSize(true);
         attachSwipe();
 
         FloatingActionButton fab = view.findViewById(R.id.fab_todo);
