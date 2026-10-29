@@ -26,6 +26,9 @@ public final class CardBg {
     private CardBg() {
     }
 
+    /** bgColor 取此值表示“跟随应用背景”（BackgroundPrefs）。 */
+    public static final int BG_APP = -1;
+
     public static void clear() {
         cache = null;
         cacheKey = null;
@@ -122,11 +125,40 @@ public final class CardBg {
                 titleColor, subColor, heroColor);
     }
 
+    /** 铺应用全局背景（跟随设置页的背景样式）。 */
+    private static void applyAppBg(Context ctx, ImageView bg, View scrim,
+                                TextView title, TextView date, TextView anniv,
+                                TextView days, TextView unit,
+                                int titleColor, int subColor, int heroColor) {
+        bg.setVisibility(View.VISIBLE);
+        bg.setImageDrawable(null);
+        bg.setBackground(BackgroundPrefs.drawable(ctx));
+        scrim.setVisibility(View.GONE);
+        if (BackgroundPrefs.isLightStyle(ctx)) {
+            title.setTextColor(titleColor);
+            date.setTextColor(subColor);
+            anniv.setTextColor(subColor);
+            days.setTextColor(heroColor);
+            unit.setTextColor(subColor);
+        } else {
+            title.setTextColor(0xFFFFFFFF);
+            date.setTextColor(0xF2FFFFFF);
+            anniv.setTextColor(0xF2FFFFFF);
+            days.setTextColor(0xFFFFFFFF);
+            unit.setTextColor(0xF2FFFFFF);
+        }
+    }
+
     /** 应用背景；itemColor 非 0 时铺纯色，其次单条卡片图，最后全局设置。 */
     public static void apply(Context ctx, String itemUri, int itemColor, ImageView bg, View scrim,
                             TextView title, TextView date, TextView anniv,
                             TextView days, TextView unit,
                             int titleColor, int subColor, int heroColor) {
+        if (itemColor == BG_APP) {
+            applyAppBg(ctx, bg, scrim, title, date, anniv, days, unit,
+                    titleColor, subColor, heroColor);
+            return;
+        }
         if (itemColor != 0) {
             applySolid(itemColor, bg, scrim, title, date, anniv, days, unit,
                     titleColor, subColor, heroColor);

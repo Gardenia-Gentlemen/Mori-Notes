@@ -341,7 +341,9 @@ public class CountdownFullScreenActivity extends BaseActivity {
     private void refreshBg() {
         CardBg.apply(this, item.bgUri, item.bgColor, bgView, scrimView, titleView, dateView,
                 annivView, daysView, unitView, onSurfaceC, onVariantC, onSurfaceC);
-        boolean hasBg = item.bgColor != 0 || bgView.getVisibility() == View.VISIBLE;
+        boolean hasBg = item.bgColor == CardBg.BG_APP
+                ? !BackgroundPrefs.isLightStyle(this)
+                : (item.bgColor != 0 || bgView.getVisibility() == View.VISIBLE);
         // TimeTrace 式白字分级透明度：单位 60%、日期/农历/纪念日 75%、秒表 80%
         daysView.setTextColor(hasBg ? 0xFFFFFFFF : onSurfaceC);
         titleView.setTextColor(hasBg ? 0xFFFFFFFF : onSurfaceC);
@@ -453,7 +455,8 @@ public class CountdownFullScreenActivity extends BaseActivity {
         PopupMenu pm = new PopupMenu(this, menuView);
         pm.getMenu().add(0, 1, 0, "纯色背景");
         pm.getMenu().add(0, 2, 1, "自定义图片");
-        pm.getMenu().add(0, 3, 2, "无背景");
+        pm.getMenu().add(0, 3, 2, "与应用背景相同");
+        pm.getMenu().add(0, 4, 3, "无背景");
         pm.setOnMenuItemClickListener(mi -> {
             switch (mi.getItemId()) {
                 case 1:
@@ -463,6 +466,9 @@ public class CountdownFullScreenActivity extends BaseActivity {
                     pickBg();
                     return true;
                 case 3:
+                    useAppBg();
+                    return true;
+                case 4:
                     clearBg();
                     return true;
                 default:
@@ -472,6 +478,18 @@ public class CountdownFullScreenActivity extends BaseActivity {
         pm.show();
     }
 
+    /** 背景跟随应用设置页的背景（BackgroundPrefs）。 */
+    private void useAppBg() {
+        if (!TextUtils.isEmpty(item.bgUri)) {
+            Gallery.deleteCopy(this, item.bgUri);
+        }
+        item.bgUri = "";
+        item.bgColor = CardBg.BG_APP;
+        CountdownStore.get(this).put(item);
+        refreshBg();
+        toast("背景已跟随应用");
+    }
+
     /** 纯色背景：色盘取色 + 亮度 + HEX/RGB 输入 + 预览。 */
     private void showSolidDialog() {
         LinearLayout box = new LinearLayout(this);
@@ -479,7 +497,7 @@ public class CountdownFullScreenActivity extends BaseActivity {
         box.setPadding(dp(20), dp(8), dp(20), dp(4));
 
         final ColorWheelView wheel = new ColorWheelView(this);
-        int init = item.bgColor != 0 ? item.bgColor : 0xFF3F6FD8;
+        int init = item.bgColor > 0 ? item.bgColor : 0xFF3F6FD8;
         wheel.setColor(init);
         LinearLayout.LayoutParams wlp = new LinearLayout.LayoutParams(dp(230), dp(230));
         wlp.gravity = Gravity.CENTER_HORIZONTAL;

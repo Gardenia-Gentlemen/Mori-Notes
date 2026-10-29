@@ -22,4 +22,9 @@
         <item name="android:background">@android:color/transparent</item>
         <item name="titleTextAppearance">?attr/textAppearanceTitleLarge</item>
     </style>
+
+    <style name="Widget.Notebook.NavIndicator"
+        parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
+        <item name="android:color">@color/nav_indicator</item>
+    </style>
 </resources>

@@ -64,32 +64,46 @@ public class BackgroundPrefs {
                 == Configuration.UI_MODE_NIGHT_YES;
     }
 
-    public static void apply(Context context, View root) {
-        if (root == null) return;
+    /** 按全局设置构建背景 Drawable，供根布局与倒数日全屏页共用。 */
+    public static Drawable drawable(Context context) {
         int style = getStyle(context);
         boolean night = isNight(context);
-        Drawable d;
         if (style == 7) {
-            d = imageDrawable(context);
+            Drawable d = imageDrawable(context);
             if (d == null) {
-                d = new ColorDrawable(MaterialColors.getColor(root, com.google.android.material.R.attr.colorSurface));
-            } else {
-                d = new LayerDrawable(new Drawable[]{new ColorDrawable(night ? 0x66000000 : 0x4DFFFFFF), d});
+                return new ColorDrawable(surfaceColor(context));
             }
-        } else if (style == 5) {
-            d = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+            return new LayerDrawable(new Drawable[]{
+                    new ColorDrawable(night ? 0x66000000 : 0x4DFFFFFF), d});
+        }
+        if (style == 5) {
+            return new GradientDrawable(GradientDrawable.Orientation.TL_BR,
                     night ? new int[]{0xFF1A1B2E, 0xFF221B2E, 0xFF2A1B24}
                             : new int[]{0xFFE8EAFF, 0xFFF3E7FF, 0xFFFFE9F2});
-        } else if (style == 6) {
-            d = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+        }
+        if (style == 6) {
+            return new GradientDrawable(GradientDrawable.Orientation.TL_BR,
                     night ? new int[]{0xFF2B211A, 0xFF2B1B20, 0xFF241B2B}
                             : new int[]{0xFFFFF1E1, 0xFFFFE3E9, 0xFFF6E7FF});
-        } else if (style >= 1 && style <= 4) {
-            d = new ColorDrawable(night ? SOLIDS_DARK[style] : SOLIDS[style]);
-        } else {
-            d = new ColorDrawable(MaterialColors.getColor(root, com.google.android.material.R.attr.colorSurface));
         }
-        root.setBackground(d);
+        if (style >= 1 && style <= 4) {
+            return new ColorDrawable(night ? SOLIDS_DARK[style] : SOLIDS[style]);
+        }
+        return new ColorDrawable(surfaceColor(context));
+    }
+
+    /** 全局背景是否偏浅（浅底用深色文字）。 */
+    public static boolean isLightStyle(Context c) {
+        return !isNight(c);
+    }
+
+    private static int surfaceColor(Context c) {
+        return MaterialColors.getColor(c, com.google.android.material.R.attr.colorSurface, 0xFFFEF7FF);
+    }
+
+    public static void apply(Context context, View root) {
+        if (root == null) return;
+        root.setBackground(drawable(context));
     }
 
     private static Drawable imageDrawable(Context context) {
