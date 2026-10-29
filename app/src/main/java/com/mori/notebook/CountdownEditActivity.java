@@ -49,6 +49,9 @@ public class CountdownEditActivity extends BaseActivity {
     private View content;
     private TextView btnModeDown;
     private TextView btnModeUp;
+    /** 分段控件容器与滑动指示块 */
+    private android.widget.FrameLayout segMode, segAnniv, segRepeat;
+    private View thumbMode, thumbAnniv, thumbRepeat;
     private View groupAnniv;
     private MaterialSwitch swAnniv;
     private View groupAnnivBody;
@@ -111,6 +114,12 @@ public class CountdownEditActivity extends BaseActivity {
         swPinned = findViewById(R.id.sw_pinned);
         btnModeDown = findViewById(R.id.btn_mode_down);
         btnModeUp = findViewById(R.id.btn_mode_up);
+        segMode = findViewById(R.id.seg_mode);
+        segAnniv = findViewById(R.id.seg_anniv);
+        segRepeat = findViewById(R.id.seg_repeat);
+        thumbMode = findViewById(R.id.thumb_mode);
+        thumbAnniv = findViewById(R.id.thumb_anniv);
+        thumbRepeat = findViewById(R.id.thumb_repeat);
         groupAnniv = findViewById(R.id.group_anniv);
         swAnniv = findViewById(R.id.sw_anniv);
         groupAnnivBody = findViewById(R.id.group_anniv_body);
@@ -517,7 +526,7 @@ public class CountdownEditActivity extends BaseActivity {
     private void setMode(boolean up) {
         if (uiUp == up) return;
         uiUp = up;
-        applySegStyles();
+        applySegStyles(true);
         bounce(up ? btnModeUp : btnModeDown);
         syncVisibility();
     }
@@ -526,7 +535,7 @@ public class CountdownEditActivity extends BaseActivity {
     private void setAnnivKind(boolean days) {
         if (uiAnnivDays == days) return;
         uiAnnivDays = days;
-        applySegStyles();
+        applySegStyles(true);
         bounce(days ? btnAnnivDays : btnAnnivCalendar);
         syncVisibility();
     }
@@ -535,7 +544,7 @@ public class CountdownEditActivity extends BaseActivity {
     private void setRepeatUnit(int unit) {
         if (uiRepeatUnit == unit) return;
         uiRepeatUnit = unit;
-        applySegStyles();
+        applySegStyles(true);
         bounce(repeatButton(unit));
         syncIntervalSuffix();
         syncVisibility();
@@ -575,7 +584,11 @@ public class CountdownEditActivity extends BaseActivity {
 
     /** 把分段控件的选中态绘画出来（背景 + 文字色）。 */
     private void applySegStyles() {
-        int on = themeColor(com.google.android.material.R.attr.colorOnSurface);
+        applySegStyles(false);
+    }
+
+    private void applySegStyles(boolean animate) {
+        int on = themeColor(com.google.android.material.R.attr.colorOnPrimary);
         int off = themeColor(com.google.android.material.R.attr.colorOnSurfaceVariant);
         segStyle(btnModeDown, !uiUp, on, off);
         segStyle(btnModeUp, uiUp, on, off);
@@ -585,6 +598,54 @@ public class CountdownEditActivity extends BaseActivity {
         segStyle(btnRepMonth, uiRepeatUnit == Countdown.REPEAT_MONTHLY, on, off);
         segStyle(btnRepWeek, uiRepeatUnit == Countdown.REPEAT_WEEKLY, on, off);
         segStyle(btnRepDay, uiRepeatUnit == Countdown.REPEAT_DAILY, on, off);
+
+        segThumb(segMode, thumbMode, new TextView[]{btnModeDown, btnModeUp},
+                uiUp ? 1 : 0, animate);
+        segThumb(segAnniv, thumbAnniv, new TextView[]{btnAnnivDays, btnAnnivCalendar},
+                uiAnnivDays ? 0 : 1, animate);
+        segThumb(segRepeat, thumbRepeat,
+                new TextView[]{btnRepYear, btnRepMonth, btnRepWeek, btnRepDay},
+                repeatIndex(uiRepeatUnit), animate);
+    }
+
+    private int repeatIndex(int unit) {
+        switch (unit) {
+            case Countdown.REPEAT_MONTHLY: return 1;
+            case Countdown.REPEAT_WEEKLY: return 2;
+            case Countdown.REPEAT_DAILY: return 3;
+            default: return 0;
+        }
+    }
+
+    /**
+     * 把滑动指示块移动到第 index 个分段。
+     * 首次布局直接落位，后续切换用 240ms 缓动滑过去。
+     */
+    private void segThumb(android.widget.FrameLayout seg, View thumb,
+                          TextView[] items, int index, boolean animate) {
+        if (seg == null || thumb == null || items == null || items.length == 0) return;
+        final int idx = Math.max(0, Math.min(index, items.length - 1));
+        Runnable job = () -> {
+            int inner = seg.getWidth() - seg.getPaddingLeft() - seg.getPaddingRight();
+            if (inner <= 0) return;
+            int w = inner / items.length;
+            android.view.ViewGroup.LayoutParams lp = thumb.getLayoutParams();
+            if (lp.width != w) {
+                lp.width = w;
+                thumb.setLayoutParams(lp);
+            }
+            float tx = seg.getPaddingLeft() + (float) idx * w;
+            boolean first = thumb.getTag() == null;
+            if (first || !animate) {
+                thumb.animate().cancel();
+                thumb.setX(tx);
+            } else if (Math.abs(thumb.getX() - tx) > 0.5f) {
+                thumb.animate().x(tx).setDuration(240)
+                        .setInterpolator(new PathInterpolator(0.2f, 0f, 0f, 1f)).start();
+            }
+            thumb.setTag(Boolean.TRUE);
+        };
+        if (seg.isLaidOut()) job.run(); else seg.post(job);
     }
 
     private int themeColor(int attr) {
@@ -598,7 +659,7 @@ public class CountdownEditActivity extends BaseActivity {
 
     private void segStyle(TextView v, boolean selected, int onColor, int offColor) {
         if (v == null) return;
-        v.setBackgroundResource(selected ? R.drawable.bg_seg_on : R.drawable.bg_seg_ripple);
+        v.setBackgroundResource(R.drawable.bg_seg_ripple);
         v.setTextColor(selected ? onColor : offColor);
         v.setTypeface(null, selected ? android.graphics.Typeface.BOLD
                 : android.graphics.Typeface.NORMAL);
@@ -629,7 +690,7 @@ public class CountdownEditActivity extends BaseActivity {
         groupShowCal.setVisibility(annivOn && !uiAnnivDays ? View.VISIBLE : View.GONE);
         tilAnnivMessage.setVisibility(annivOn ? View.VISIBLE : View.GONE);
         syncIntervalSuffix();
-        applySegStyles();
+        applySegStyles(animate);
     }
 
     /** 把日切时间与蒙版强度的当前值刷到界面（-1 时从全局取缺省）。 */
