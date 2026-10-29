@@ -40,4 +40,4 @@
 
 ## Releases
 
-每个版本都在 [Releases](https://github.com/Gardenia-Gentlemen/notebook/releases) 有对应标签，附件：成品包 `notebook-vX.apk`、源代码 `notebook-vX-src.zip`，说明为该版本更新日志。
+每个版本都在 [Releases](https://github.com/Gardenia-Gentlemen/notebook/releases) 有对应标签，附件：成品包 `mori_notes-vX.apk`、源代码 `mori_notes-vX-src.zip`，说明为该版本更新日志。

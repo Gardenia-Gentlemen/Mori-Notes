@@ -10,7 +10,7 @@
 
 规则:
     * 新版本源码快照进 releases/v<new>/src
-    * Release 附件 = notebook-v<new>.apk（成品包） + notebook-v<new>-src.zip（本版本源码）
+    * Release 附件 = mori_notes-v<new>.apk（成品包） + mori_notes-v<new>-src.zip（本版本源码）
     * Release 正文 = CHANGELOG.md 中 ## <new> (code) 章节
 """
 import argparse
@@ -114,7 +114,7 @@ def zip_src(version):
     src = os.path.join(ROOT, "releases", "v" + version, "src")
     if not os.path.isdir(src):
         sys.exit("缺少 releases/v%s/src，无法打包" % version)
-    out = "/tmp/notebook-v%s-src.zip" % version
+    out = "/tmp/mori_notes-v%s-src.zip" % version
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
         for dp, _, fs in os.walk(src):
             for f in fs:
@@ -263,7 +263,7 @@ def main():
     with open(note, "w", encoding="utf-8") as f:
         f.write("# v%s 源码\n\n本目录 `src/` 为 v%s 构建时的完整可编译工程"
                 "（已剔除 build/、local.properties、keystore.properties）。\n"
-                "发版时它被打包成 `notebook-v%s-src.zip`，作为本版本"
+                "发版时它被打包成 `mori_notes-v%s-src.zip`，作为本版本"
                 " Release 的「源代码」附件。\n" % (v, v, v))
 
     tok = token()
@@ -286,9 +286,9 @@ def main():
         sys.exit("建 Release 失败 %s: %s" % (st, rel.get("message")))
     print("release v%s OK" % v)
 
-    assets = [(apk, "notebook-v%s.apk" % v, "")]
+    assets = [(apk, "mori_notes-v%s.apk" % v, "")]
     if cur_zip:
-        assets.append((cur_zip, "notebook-v%s-src.zip" % v, "源代码 (v%s)" % v))
+        assets.append((cur_zip, "mori_notes-v%s-src.zip" % v, "源代码 (v%s)" % v))
     for path, name, label in assets:
         st, r2 = upload_asset(rel, path, name, label, tok)
         print(" asset %s -> %s %s" % (name, st, "" if st in (200, 201) else r2.get("message")))
