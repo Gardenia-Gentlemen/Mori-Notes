@@ -154,6 +154,14 @@ public class CountdownFragment extends Fragment {
         recycler.setLayoutManager(new LinearLayoutManager(requireContext()));
         recycler.setAdapter(adapter);
         recycler.setHasFixedSize(true);
+        // 多留几屏卡片，减少滑动时的重绑与重建
+        recycler.setItemViewCacheSize(12);
+        RecyclerView.ItemAnimator animator = recycler.getItemAnimator();
+        if (animator instanceof androidx.recyclerview.widget.SimpleItemAnimator) {
+            ((androidx.recyclerview.widget.SimpleItemAnimator) animator)
+                    .setSupportsChangeAnimations(false);
+            animator.setChangeDuration(0);
+        }
         attachDragSort();
         FloatingActionButton fab = view.findViewById(R.id.fab_countdown);
         fab.setOnClickListener(v -> create());

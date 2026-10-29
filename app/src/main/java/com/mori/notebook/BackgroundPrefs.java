@@ -42,10 +42,32 @@ public class BackgroundPrefs {
                 == Configuration.UI_MODE_NIGHT_YES;
     }
 
+    /** 全局背景 Drawable 的 ConstantState 缓存：同一套样式不重复构建、不重复读配置。 */
+    private static int bgCacheStyle = Integer.MIN_VALUE;
+    private static boolean bgCacheNight;
+    private static android.graphics.drawable.Drawable.ConstantState bgCacheState;
+
     /** 按全局设置构建背景 Drawable，供根布局与倒数日全屏页共用。 */
     public static Drawable drawable(Context context) {
         int style = getStyle(context);
         boolean night = isNight(context);
+        if (bgCacheState != null && bgCacheStyle == style && bgCacheNight == night) {
+            Drawable cached = bgCacheState.newDrawable(context.getResources());
+            if (cached != null) {
+                return cached;
+            }
+        }
+        Drawable d = buildDrawable(context, style, night);
+        android.graphics.drawable.Drawable.ConstantState cs = d.getConstantState();
+        if (cs != null) {
+            bgCacheStyle = style;
+            bgCacheNight = night;
+            bgCacheState = cs;
+        }
+        return d;
+    }
+
+    private static Drawable buildDrawable(Context context, int style, boolean night) {
         if (style == STYLE_BLUE_PURPLE) {
             return new GradientDrawable(GradientDrawable.Orientation.TL_BR,
                     night ? new int[]{0xFF1A1B2E, 0xFF221B2E, 0xFF2A1B24}

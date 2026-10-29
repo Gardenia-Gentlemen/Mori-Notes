@@ -20,24 +20,29 @@ import java.io.InputStream;
 
 /** 把背景图与蒙版铺到卡片上，未设置时清理干净。 */
 public final class CardBg {
-    private static Bitmap cache;
-    private static String cacheKey;
-
+    /** 多张背景图共用的位图缓存，避免滑动列表时反复解码。 */
+    private static final android.util.LruCache<String, Bitmap> CACHE;
+    static {
+        int maxKb = (int) (Runtime.getRuntime().maxMemory() / 1024 / 8);
+        CACHE = new android.util.LruCache<String, Bitmap>(Math.max(4 * 1024, maxKb)) {
+            @Override
+            protected int sizeOf(String key, Bitmap value) {
+                return Math.max(1, value.getByteCount() / 1024);
+            }
+        };
+    }
     private CardBg() {
     }
-
     /** bgColor 取此值表示“跟随应用背景”（BackgroundPrefs）。 */
     public static final int BG_APP = -1;
-
     public static void clear() {
-        cache = null;
-        cacheKey = null;
+        CACHE.evictAll();
     }
-
     private static Bitmap load(Context ctx, Uri uri) {
         String key = uri.toString();
-        if (cache != null && key.equals(cacheKey)) {
-            return cache;
+        Bitmap hit = CACHE.get(key);
+        if (hit != null) {
+            return hit;
         }
         Bitmap bmp = null;
         try {
@@ -58,8 +63,7 @@ public final class CardBg {
         } catch (Exception ignored) {
         }
         if (bmp != null) {
-            cache = bmp;
-            cacheKey = key;
+            CACHE.put(key, bmp);
         }
         return bmp;
     }

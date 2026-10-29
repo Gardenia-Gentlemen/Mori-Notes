@@ -73,7 +73,13 @@ public class CountdownAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
         }
     }
 
+    /** 局部刷新的载荷：只改多选态样式。 */
+    static final Object PAYLOAD_SELECTION = new Object();
     private final List<Row> rows = new ArrayList<>();
+    /** 上一次 setData 的数据签名，相同则跳过重建 */
+    private String lastDataKey;
+    /** 仅用于读取全局显示配置（蒙版强度、夜间模式） */
+    private Context appContext;
     private final Listener listener;
     /** 当前分组序号，拖拽仅允许在同组内进行 */
     private int groupSeq;
@@ -87,6 +93,13 @@ public class CountdownAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
     }
 
     public void setData(List<Countdown> source) {
+        // 数据没有实质变化时不重建列表（onResume 会重复调用）
+        String key = signature(source);
+        if (key.equals(lastDataKey) && !rows.isEmpty()) {
+            pruneSelection(source);
+            return;
+        }
+        lastDataKey = key;
         rows.clear();
         pruneSelection(source);
         List<Countdown> pinned = new ArrayList<>();
@@ -105,6 +118,33 @@ public class CountdownAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
         addGroup("还没到 · " + upcoming.size(), upcoming, true);
         addGroup("已经过 · " + past.size(), past, false);
         notifyDataSetChanged();
+    }
+
+    /** 影响列表展示的字段快照，用于跳过无变化的整屏重绑。 */
+    private String signature(List<Countdown> source) {
+        int globalMask = 0;
+        int night = 0;
+        if (appContext != null) {
+            globalMask = CountdownPrefs.getCardMask(appContext);
+            night = appContext.getResources().getConfiguration().uiMode
+                    & android.content.res.Configuration.UI_MODE_NIGHT_MASK;
+        }
+        StringBuilder b = new StringBuilder(source.size() * 48);
+        b.append(globalMask).append('\u0001').append(night).append('\u0001')
+                .append(CountdownTime.dayStartHour()).append('\u0001');
+        for (Countdown c : source) {
+            b.append(c.id).append('\u0001').append(c.title).append('\u0001')
+                    .append(c.date).append('\u0001').append(c.mode).append('\u0001')
+                    .append(c.pinned).append('\u0001').append(c.annivType).append('\u0001')
+                    .append(c.customDays).append('\u0001').append(c.annivMessage).append('\u0001')
+                    .append(c.showYear).append(c.showMonth).append(c.showWeek).append('\u0001')
+                    .append(c.repeatType).append('\u0001').append(c.repeatInterval).append('\u0001')
+                    .append(c.bgUri).append('\u0001').append(c.bgColor).append('\u0001')
+                    .append(c.fontPath).append('\u0001').append(c.sortIndex).append('\u0001')
+                    .append(c.deletedAt).append('\u0001').append(c.cardMask).append('\u0001')
+                    .append(c.dayStartHour).append('\u0001');
+        }
+        return b.toString();
     }
 
     private void addGroup(String header, List<Countdown> group, boolean ascending) {
@@ -187,9 +227,49 @@ public class CountdownAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
             return new HeaderHolder(inflater.inflate(R.layout.item_countdown_header, parent, false));
         }
         if (viewType == TYPE_STACK) {
-            return new ItemHolder(inflater.inflate(R.layout.item_countdown_stack, parent, false));
+            return bindItemListeners(new ItemHolder(
+                    inflater.inflate(R.layout.item_countdown_stack, parent, false)));
         }
-        return new ItemHolder(inflater.inflate(R.layout.item_countdown, parent, false));
+        return bindItemListeners(new ItemHolder(
+                inflater.inflate(R.layout.item_countdown, parent, false)));
+    }
+
+    /** 点击/长按监听只在创建时挂一次，绑定阶段不再新建监听对象。 */
+    private ItemHolder bindItemListeners(final ItemHolder h) {
+        if (appContext == null) {
+            appContext = h.card.getContext();
+        }
+        h.card.setOnClickListener(v -> {
+            Countdown c = h.current;
+            if (c == null) {
+                return;
+            }
+            if (selectionMode) {
+                toggleSelection(c);
+                listener.onSelectionChanged();
+            } else {
+                listener.onClick(c);
+            }
+        });
+        h.card.setOnLongClickListener(v -> {
+            if (h.current != null) {
+                listener.onLongClick(h.current);
+            }
+            return true;
+        });
+        h.menu.setOnClickListener(v -> {
+            if (h.current != null) {
+                showMenu(v, h.current);
+            }
+        });
+        h.menu.setOnLongClickListener(v -> {
+            if (selectionMode) {
+                return true;
+            }
+            listener.onDragStart(h);
+            return true;
+        });
+        return h;
     }
 
     @Override
@@ -201,9 +281,13 @@ public class CountdownAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
         }
         ItemHolder h = (ItemHolder) holder;
         Countdown c = row.item;
+        h.current = c;
         h.title.setText(TextUtils.isEmpty(c.title) ? "无标题" : c.title);
-        h.days.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX,
-                row.message ? h.tfDaysSize * 0.55f : h.tfDaysSize);
+        float daysSize = row.message ? h.tfDaysSize * 0.55f : h.tfDaysSize;
+        if (h.appliedDaysSize != daysSize) {
+            h.days.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, daysSize);
+            h.appliedDaysSize = daysSize;
+        }
         h.days.setText(row.num);
         h.unit.setText(row.unit);
         h.unit.setVisibility(TextUtils.isEmpty(row.unit) ? View.GONE : View.VISIBLE);
@@ -214,30 +298,40 @@ public class CountdownAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
             h.anniv.setVisibility(View.VISIBLE);
             h.anniv.setText(row.anniv);
         }
-        CardBg.apply(h.itemView.getContext(), c.bgUri, c.bgColor, h.bg, h.scrim, h.title, h.date, h.anniv,
-                h.days, h.unit, c.maskOf(h.itemView.getContext()),
-                h.defaultTitle, h.defaultSub, h.defaultHero);
-        applyFont(h, c);
-        boolean sel = selectionMode && selected.contains(c.id);
-        h.card.setOnClickListener(v -> {
-            if (selectionMode) {
-                toggleSelection(c);
-                listener.onSelectionChanged();
-            } else {
-                listener.onClick(c);
-            }
-        });
-        h.card.setOnLongClickListener(v -> {
-            listener.onLongClick(c);
-            return true;
-        });
+        // 背景解码与字体解析开销大，同一份配置只应用一次
+        String bgKey = String.valueOf(c.bgUri) + "#" + c.bgColor + "#"
+                + c.maskOf(h.itemView.getContext());
+        if (!bgKey.equals(h.appliedBgKey)) {
+            CardBg.apply(h.itemView.getContext(), c.bgUri, c.bgColor, h.bg, h.scrim,
+                    h.title, h.date, h.anniv, h.days, h.unit,
+                    c.maskOf(h.itemView.getContext()),
+                    h.defaultTitle, h.defaultSub, h.defaultHero);
+            h.appliedBgKey = bgKey;
+        }
+        String fontKey = c.fontPath == null ? "" : c.fontPath;
+        if (!fontKey.equals(h.appliedFontKey)) {
+            applyFont(h, c);
+            h.appliedFontKey = fontKey;
+        }
         h.menu.setVisibility(selectionMode ? View.GONE : View.VISIBLE);
-        h.menu.setOnClickListener(v -> showMenu(v, c));
-        h.menu.setOnLongClickListener(selectionMode ? null : v -> {
-            listener.onDragStart(h);
-            return true;
-        });
-        applySelectionStyle(h, sel);
+        applySelectionStyle(h, selectionMode && selected.contains(c.id));
+    }
+
+    /** 多选态变化只更新描边与三点按钮，不重铺背景、不重设字体。 */
+    @Override
+    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position,
+                                 @NonNull java.util.List<Object> payloads) {
+        if (!payloads.isEmpty() && payloads.contains(PAYLOAD_SELECTION)
+                && holder instanceof ItemHolder) {
+            ItemHolder h = (ItemHolder) holder;
+            Countdown c = rows.get(position).item;
+            if (c != null) {
+                h.menu.setVisibility(selectionMode ? View.GONE : View.VISIBLE);
+                applySelectionStyle(h, selectionMode && selected.contains(c.id));
+                return;
+            }
+        }
+        super.onBindViewHolder(holder, position, payloads);
     }
 
     /** 右侧三点菜单：分享图片、设置背景、编辑、选择字体、删除倒数日 */
@@ -316,7 +410,9 @@ public class CountdownAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
         if (!on) {
             selected.clear();
         }
-        notifyDataSetChanged();
+        if (!rows.isEmpty()) {
+            notifyItemRangeChanged(0, rows.size(), PAYLOAD_SELECTION);
+        }
     }
 
     public boolean isSelectionMode() {
@@ -332,7 +428,7 @@ public class CountdownAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
         }
         int pos = positionOf(c.id);
         if (pos >= 0) {
-            notifyItemChanged(pos);
+            notifyItemChanged(pos, PAYLOAD_SELECTION);
         }
     }
 
@@ -343,7 +439,9 @@ public class CountdownAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
                 selected.add(r.item.id);
             }
         }
-        notifyDataSetChanged();
+        if (!rows.isEmpty()) {
+            notifyItemRangeChanged(0, rows.size(), PAYLOAD_SELECTION);
+        }
     }
 
     public int selectedCount() {
@@ -458,6 +556,12 @@ public class CountdownAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
         final Typeface tfUnit;
         final Typeface tfAnniv;
         final float tfDaysSize;
+        /** 当前绑定的数据，供常驻监听器读取 */
+        Countdown current;
+        /** 已应用的背景签名与字体，相同则跳过重活 */
+        String appliedBgKey;
+        String appliedFontKey;
+        float appliedDaysSize;
 
         ItemHolder(View v) {
             super(v);
