@@ -222,7 +222,7 @@ public final class ShareUtils {
             int mh = 0;
             for (int i = 0; i < n; i++) {
                 parts[i] = renderCountdown(ctx, list.get(i), cardW,
-                        Math.round(cardW * 9f / 16f), dp(ctx, 16));
+                        Math.round(cardW * 9f / 16f), dp(ctx, 16), false);
                 mh = Math.max(mh, parts[i].getHeight());
             }
             int rows = (n + t - 1) / t;
@@ -370,6 +370,10 @@ public final class ShareUtils {
 
     /** 指定宽度/高度/圆角的卡片位图；fixedH>0 时固定高度且内容垂直居中，cornerPx>0 时圆角裁剪。 */
     public static Bitmap renderCountdown(Context ctx, Countdown c, int width, int fixedH, int cornerPx) {
+        return renderCountdown(ctx, c, width, fixedH, cornerPx, true);
+    }
+    /** showAnniv=false 时不渲染纪念日行（分享图用）。 */
+    public static Bitmap renderCountdown(Context ctx, Countdown c, int width, int fixedH, int cornerPx, boolean showAnniv) {
         width = Math.max(width, dp(ctx, 140));
         final float fs = fixedH > 0 ? 1.3f : 1f;
         long today = CountdownTime.today();
@@ -417,7 +421,7 @@ public final class ShareUtils {
             left.addView(lunarView);
         }
 
-        if (anniv != null && !anniv.isEmpty()) {
+        if (showAnniv && anniv != null && !anniv.isEmpty()) {
             TextView a = new TextView(ctx);
             if (tfR != null) a.setTypeface(tfR);
             a.setText(anniv);
