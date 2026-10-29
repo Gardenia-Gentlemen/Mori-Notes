@@ -35,7 +35,7 @@
                 app:cardBackgroundColor="?attr/colorSurfaceContainerHigh">
                 <FrameLayout
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content">
+                    android:layout_height="match_parent">
                     <ImageView
                         android:id="@+id/bg_image"
                         android:layout_width="match_parent"
@@ -51,8 +51,9 @@
                         android:background="#000000"
                         android:visibility="gone" />
                 <LinearLayout
+                    android:id="@+id/card_content"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="match_parent"
                     android:orientation="vertical"
                     android:padding="20dp">
                     <TextView
@@ -88,6 +89,10 @@
                             android:layout_marginBottom="8dp"
                             android:textSize="14sp" />
                     </LinearLayout>
+                    <Space
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1" />
                     <com.google.android.material.progressindicator.LinearProgressIndicator
                         android:id="@+id/progress"
                         android:layout_width="match_parent"

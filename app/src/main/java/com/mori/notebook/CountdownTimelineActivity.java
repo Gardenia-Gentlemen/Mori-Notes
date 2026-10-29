@@ -57,6 +57,7 @@ public class CountdownTimelineActivity extends BaseActivity {
             return;
         }
         bind(c);
+        applyCardRatio();
         final String cid = c.id;
         toolbar.inflateMenu(R.menu.menu_countdown_timeline);
         toolbar.setOnMenuItemClickListener(m -> {
@@ -134,6 +135,18 @@ public class CountdownTimelineActivity extends BaseActivity {
             Node n = nodes.get(i);
             addNode(box, n, n.date <= today, i == nodes.size() - 1);
         }
+    }
+
+    /** 卡片按 16:9（宽:高）定高，并贴顶展示。 */
+    private void applyCardRatio() {
+        View card = findViewById(R.id.card);
+        card.post(() -> {
+            int w = card.getWidth();
+            if (w <= 0) return;
+            ViewGroup.LayoutParams lp = card.getLayoutParams();
+            lp.height = Math.round(w * 9f / 16f);
+            card.setLayoutParams(lp);
+        });
     }
 
     /** 应用该条倒数日的卡片背景与字体，与全屏页保持一致。 */
