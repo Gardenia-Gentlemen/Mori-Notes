@@ -45,7 +45,7 @@ public class FontsActivity extends BaseActivity {
     private TextView empty;
     private FontAdapter adapter;
 
-    private ActivityResultLauncher<Intent> fontPicker;
+    private ActivityResultLauncher<String[]> fontPicker;
     private ActivityResultLauncher<Intent> zipPicker;
     private ActivityResultLauncher<String> exportPicker;
 
@@ -82,15 +82,19 @@ public class FontsActivity extends BaseActivity {
         list.setAdapter(adapter);
 
         fontPicker = registerForActivityResult(
-                new ActivityResultContracts.StartActivityForResult(), r -> {
-                    if (r.getResultCode() != RESULT_OK || r.getData() == null) return;
-                    Uri uri = r.getData().getData();
-                    if (uri == null) return;
-                    String path = FontImporter.importTo(this, uri);
-                    if (path != null) {
-                        reload();
-                        toast("已加入字体库");
+                new ActivityResultContracts.OpenMultipleDocuments(), uris -> {
+                    if (uris == null || uris.isEmpty()) return;
+                    int ok = 0;
+                    for (Uri uri : uris) {
+                        if (uri == null) continue;
+                        if (FontImporter.importTo(this, uri, true) != null) ok++;
                     }
+                    reload();
+                    int all = uris.size();
+                    if (ok == 0) toast("导入失败：选中的文件都不是有效字体");
+                    else if (ok < all) toast("已导入 " + ok + " 个字体，跳过 " + (all - ok) + " 个无效文件");
+                    else if (ok == 1) toast("已加入 1 个字体");
+                    else toast("已导入 " + ok + " 个字体");
                 });
 
         zipPicker = registerForActivityResult(
@@ -117,12 +121,11 @@ public class FontsActivity extends BaseActivity {
         list.setVisibility(none ? View.GONE : View.VISIBLE);
     }
 
-    /* ---------- 添加单个字体 ---------- */
-
+    /* ---------- 添加字体（支持多选） ---------- */
     private void pickFont() {
         if (fontPicker == null) return;
         try {
-            fontPicker.launch(FontImporter.pickIntent());
+            fontPicker.launch(FontImporter.FONT_MIME_TYPES);
         } catch (Exception e) {
             toast("无法打开文件选择器");
         }

@@ -27,18 +27,21 @@ import java.util.Locale;
 public final class FontImporter {
     private static final long MAX_SIZE = 20L * 1024 * 1024;
 
+    /** 选择字体时接受的 MIME 类型，供文件选择器（含多选）复用。 */
+    public static final String[] FONT_MIME_TYPES = {
+            "font/ttf", "font/otf", "font/ttc",
+            "application/x-font-ttf", "application/x-font-opentype",
+            "application/octet-stream"};
+
     private FontImporter() {
     }
 
-    /** 拉起系统文件选择器的 Intent。 */
+    /** 拉起系统文件选择器的 Intent（单选）。 */
     public static Intent pickIntent() {
         Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         i.addCategory(Intent.CATEGORY_OPENABLE);
         i.setType("*/*");
-        i.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{
-                "font/ttf", "font/otf", "font/ttc",
-                "application/x-font-ttf", "application/x-font-opentype",
-                "application/octet-stream"});
+        i.putExtra(Intent.EXTRA_MIME_TYPES, FONT_MIME_TYPES);
         return i;
     }
 
@@ -52,6 +55,11 @@ public final class FontImporter {
 
     /** 复制到字体库并校验可加载，返回保存后的绝对路径；失败返回 null 并已提示。 */
     public static String importTo(Context ctx, Uri uri) {
+        return importTo(ctx, uri, false);
+    }
+
+    /** 同 importTo(ctx, uri)；quiet=true 时失败不弹提示，用于批量导入后统一汇报。 */
+    public static String importTo(Context ctx, Uri uri, boolean quiet) {
         if (ctx == null || uri == null) return null;
         String ext = ".ttf";
         String base = "custom";
@@ -67,7 +75,7 @@ public final class FontImporter {
         }
         File dir = fontDir(ctx);
         if (dir == null) {
-            toast(ctx, "无法创建字体目录");
+            if (!quiet) toast(ctx, "无法创建字体目录");
             return null;
         }
         File tmp = new File(dir, "tmp_import" + ext);
@@ -97,13 +105,13 @@ public final class FontImporter {
             }
         } catch (Throwable t) {
             tmp.delete();
-            toast(ctx, "不是有效的字体文件");
+            if (!quiet) toast(ctx, "不是有效的字体文件");
             return null;
         }
         File target = unique(dir, base, ext);
         if (!tmp.renameTo(target)) {
             tmp.delete();
-            toast(ctx, "字体保存失败");
+            if (!quiet) toast(ctx, "字体保存失败");
             return null;
         }
         Fonts.clear();
