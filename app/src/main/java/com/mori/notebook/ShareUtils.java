@@ -312,7 +312,7 @@ public final class ShareUtils {
         for (int i = 0; i < list.size(); i++) {
             Countdown c = list.get(i);
             try {
-                Bitmap out = renderCountdown(ctx, c);
+                Bitmap out = renderCountdownsLandscape(ctx, java.util.Collections.singletonList(c));
                 String name;
                 if (many) {
                     String idx = list.size() > 99 ? String.valueOf(i + 1)
