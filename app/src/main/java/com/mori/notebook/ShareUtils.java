@@ -255,7 +255,7 @@ public final class ShareUtils {
         Canvas canvas = new Canvas(out);
         Bitmap outer = backgroundOf(ctx, list.get(0));
         if (outer != null) {
-            drawBgCover(canvas, blurBg(outer), canvasW, canvasH);
+            drawBgCover(canvas, blurBg(outer), canvasW, canvasH, 1.1f);
             drawScrim(ctx, canvas, canvasW, canvasH);
         } else {
             canvas.drawColor(0xFFF6F5F8);
@@ -469,15 +469,15 @@ public final class ShareUtils {
     private static Bitmap blurBg(Bitmap src) {
         if (src == null) return null;
         try {
-            int w = Math.max(16, src.getWidth() / 16);
-            int h = Math.max(16, src.getHeight() / 16);
+            int w = Math.max(24, src.getWidth() / 8);
+            int h = Math.max(24, src.getHeight() / 8);
             Bitmap small = Bitmap.createScaledBitmap(src, w, h, true);
             int[] px = new int[w * h];
             small.getPixels(px, 0, w, 0, 0, w, h);
             int[] tmp = new int[px.length];
-            for (int pass = 0; pass < 3; pass++) {
-                boxH(px, tmp, w, h, 2);
-                boxV(tmp, px, w, h, 2);
+            for (int pass = 0; pass < 2; pass++) {
+                boxH(px, tmp, w, h, 1);
+                boxV(tmp, px, w, h, 1);
             }
             small.setPixels(px, 0, w, 0, 0, w, h);
             return small;
@@ -525,8 +525,13 @@ public final class ShareUtils {
 
     /** 等比铺满裁剪绘制（cover）。 */
     private static void drawBgCover(Canvas canvas, Bitmap bg, int w, int h) {
+        drawBgCover(canvas, bg, w, h, 1f);
+    }
+
+    /** 同 drawBgCover，zoom 为额外放大倍数（>1 表示画面放大、边缘裁切）。 */
+    private static void drawBgCover(Canvas canvas, Bitmap bg, int w, int h, float zoom) {
         if (bg == null || w <= 0 || h <= 0) return;
-        float scale = Math.max(w / (float) bg.getWidth(), h / (float) bg.getHeight());
+        float scale = Math.max(w / (float) bg.getWidth(), h / (float) bg.getHeight()) * zoom;
         float dw = bg.getWidth() * scale;
         float dh = bg.getHeight() * scale;
         float dx = (w - dw) / 2f;
