@@ -386,6 +386,7 @@ public final class ShareUtils {
         row.setBackgroundColor(hasBg ? Color.TRANSPARENT : Color.WHITE);
         int pad = dp(ctx, 20);
         row.setPadding(pad, pad, pad, pad);
+        row.setGravity(android.view.Gravity.BOTTOM);
 
         LinearLayout left = new LinearLayout(ctx);
         left.setOrientation(LinearLayout.VERTICAL);
@@ -433,7 +434,7 @@ public final class ShareUtils {
         if (tfR != null) unit.setTypeface(tfR);
         unit.setText(Countdown.MODE_UP.equals(c.mode) ? " 天"
                 : (diff == 0 ? " 就是今天" : (diff > 0 ? " 天后" : " 天前")));
-        unit.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f * fs);
+        unit.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f * fs * 1.5f);
         unit.setTextColor(hasBg ? 0xF2FFFFFF : 0xFF6B6B70);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
