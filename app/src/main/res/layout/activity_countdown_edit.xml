@@ -141,6 +141,7 @@
                 </RadioGroup>
 
                 <TextView
+                    android:id="@+id/label_anniv"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="20dp"
@@ -216,6 +217,7 @@
                     android:importantForAutofill="no" />
 
                 <TextView
+                    android:id="@+id/label_repeat"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="20dp"

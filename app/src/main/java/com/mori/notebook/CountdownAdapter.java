@@ -63,6 +63,8 @@ public class CountdownAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
         String num;
         String unit;
         String anniv;
+        /** 天数位是否已被纪念日自定义文案占用 */
+        boolean message;
         boolean stack;
         int group = -1;
 
@@ -152,10 +154,16 @@ public class CountdownAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
                 r.unit = "天前";
             }
         }
-        String lunar = LunarUtil.format(c.date);
-        r.dateText = CountdownTime.formatDate(c.date) + (lunar.isEmpty() ? "" : " · " + lunar);
+        r.dateText = CountdownTime.formatDate(c.date);
         String anniv = CountdownTime.anniversaryText(c, today);
         r.anniv = TextUtils.isEmpty(anniv) ? null : anniv;
+        String msg = c.annivMessage == null ? "" : c.annivMessage.trim();
+        if (!msg.isEmpty() && CountdownTime.isAnnivHit(c, today)) {
+            r.num = msg;
+            r.unit = "";
+            r.message = true;
+            r.anniv = null; // 天数位已展示文案，避免重复
+        }
         String title = TextUtils.isEmpty(c.title) ? "无标题" : c.title;
         double width = CountdownTime.visualWidth(title) + CountdownTime.visualWidth(r.num + r.unit);
         r.stack = r.anniv != null || width > WIDTH_LIMIT;
@@ -194,6 +202,8 @@ public class CountdownAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
         ItemHolder h = (ItemHolder) holder;
         Countdown c = row.item;
         h.title.setText(TextUtils.isEmpty(c.title) ? "无标题" : c.title);
+        h.days.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX,
+                row.message ? h.tfDaysSize * 0.55f : h.tfDaysSize);
         h.days.setText(row.num);
         h.unit.setText(row.unit);
         h.unit.setVisibility(TextUtils.isEmpty(row.unit) ? View.GONE : View.VISIBLE);
@@ -446,6 +456,7 @@ public class CountdownAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
         final Typeface tfDays;
         final Typeface tfUnit;
         final Typeface tfAnniv;
+        final float tfDaysSize;
 
         ItemHolder(View v) {
             super(v);
@@ -466,6 +477,7 @@ public class CountdownAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
             tfDays = days.getTypeface();
             tfUnit = unit.getTypeface();
             tfAnniv = anniv.getTypeface();
+            tfDaysSize = days.getTextSize();
         }
     }
 }

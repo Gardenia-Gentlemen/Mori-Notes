@@ -37,6 +37,8 @@ public class CountdownEditActivity extends BaseActivity {
     private EditText etNote;
     private MaterialSwitch swPinned;
     private RadioGroup rgMode;
+    private TextView labelAnniv;
+    private TextView labelRepeat;
     private RadioGroup rgAnniv;
     private View groupCustomDays;
     private EditText etCustomDays;
@@ -65,6 +67,8 @@ public class CountdownEditActivity extends BaseActivity {
         etNote = findViewById(R.id.et_note);
         swPinned = findViewById(R.id.sw_pinned);
         rgMode = findViewById(R.id.rg_mode);
+        labelAnniv = findViewById(R.id.label_anniv);
+        labelRepeat = findViewById(R.id.label_repeat);
         rgAnniv = findViewById(R.id.rg_anniv);
         groupCustomDays = findViewById(R.id.group_custom_days);
         etCustomDays = findViewById(R.id.et_custom_days);
@@ -107,7 +111,7 @@ public class CountdownEditActivity extends BaseActivity {
                 rgRepeat.check(R.id.rb_repeat_none);
                 break;
         }
-        syncAnnivGroup();
+        syncVisibility();
         refreshDateText();
 
         if (!isNew) {
@@ -147,7 +151,8 @@ public class CountdownEditActivity extends BaseActivity {
             CardBg.clear();
             refreshBgRow();
         });
-        rgAnniv.setOnCheckedChangeListener((g, checkedId) -> syncAnnivGroup());
+        rgMode.setOnCheckedChangeListener((g, checkedId) -> syncVisibility());
+        rgAnniv.setOnCheckedChangeListener((g, checkedId) -> syncVisibility());
 
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setTitle(isNew ? "新建倒数日" : "编辑倒数日");
@@ -213,9 +218,16 @@ public class CountdownEditActivity extends BaseActivity {
         }
     }
 
-    private void syncAnnivGroup() {
-        boolean custom = rgAnniv.getCheckedRadioButtonId() == R.id.rb_anniv_days;
+    /** 计数方式决定纪念日 / 重复两块的显隐：累计只看纪念日，倒数只看重复。 */
+    private void syncVisibility() {
+        boolean up = rgMode.getCheckedRadioButtonId() == R.id.rb_up;
+        labelAnniv.setVisibility(up ? View.VISIBLE : View.GONE);
+        rgAnniv.setVisibility(up ? View.VISIBLE : View.GONE);
+        boolean custom = up && rgAnniv.getCheckedRadioButtonId() == R.id.rb_anniv_days;
         groupCustomDays.setVisibility(custom ? View.VISIBLE : View.GONE);
+        etAnnivMessage.setVisibility(up ? View.VISIBLE : View.GONE);
+        labelRepeat.setVisibility(up ? View.GONE : View.VISIBLE);
+        rgRepeat.setVisibility(up ? View.GONE : View.VISIBLE);
     }
 
     /** 保存；返回是否已写入。 */

@@ -291,6 +291,24 @@ public final class CountdownTime {
         return list;
     }
 
+    /** 今天是否正好命中设定的纪念日（每 N 天 / 第 N 年·月·周）。 */
+    public static boolean isAnnivHit(Countdown c, long todayMillis) {
+        if (c == null || c.annivType == Countdown.ANNIV_NONE) {
+            return false;
+        }
+        long days = dayDiff(c.date, todayMillis);
+        if (days <= 0) {
+            return false;
+        }
+        if (c.annivType == Countdown.ANNIV_CUSTOM_DAYS) {
+            return customCount(days, c.customDays) > 0;
+        }
+        if (c.annivType == Countdown.ANNIV_CALENDAR) {
+            return !calendar(c.date, todayMillis, c.showYear, c.showMonth, c.showWeek).isEmpty();
+        }
+        return false;
+    }
+
     /** 组装纪念日文案；非累计态或未启用时返回 null。 */
     public static String anniversaryText(Countdown c, long todayMillis) {
         if (c == null || c.annivType == Countdown.ANNIV_NONE) {
