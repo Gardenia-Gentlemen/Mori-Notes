@@ -3,7 +3,7 @@
 # 用法: python3 tools/gh_release.py [--version vX.Y.Z] [--apk path] [--note file] [--draft]
 import io, json, os, re, subprocess, sys, urllib.parse, urllib.request, urllib.error
 
-REPO = 'Gardenia-Gentlemen/notebook'
+REPO = 'Gardenia-Gentlemen/Mori-Notes'
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 def token():
