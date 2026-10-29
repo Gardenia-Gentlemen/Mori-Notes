@@ -1,4 +1,4 @@
-（# Mori Notes）
+### Mori Notes
 
 一个AI生成的 Android 笔记应用。纯 Java + Material Design 3，无第三方服务，不联网，数据完全在本地。
 
