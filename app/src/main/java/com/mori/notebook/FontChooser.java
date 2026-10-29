@@ -37,19 +37,12 @@ public final class FontChooser {
     /**
      * 弹出字体选择框。
      *
-     * @param sample 预览文字（一般为该条倒数日标题），为空时用内置示例
+     * @param sample 旧参数，保留签名兼容；预览文字已固定为「字体名称 ABC123 天地人」
      */
     public static void show(Context ctx, List<File> fonts, String currentPath, String sample, Callback cb) {
         if (ctx == null || fonts == null || cb == null) {
             return;
         }
-        String text = sample == null ? "" : sample.trim();
-        if (text.isEmpty()) {
-            text = "字体预览 Aa123";
-        } else {
-            text = text + "  Aa123";
-        }
-        final String sample2 = text;
         final String cur = currentPath == null ? "" : currentPath;
         final List<File> list = fonts;
         final int count = list.size() + 2;
@@ -95,7 +88,7 @@ public final class FontChooser {
                     return v;
                 }
                 File f = list.get(position - 1);
-                preview.setText(sample2);
+                preview.setText(fontName(f) + "  ABC123 天地人");
                 Typeface tf = typeface(f);
                 preview.setTypeface(tf == null ? Typeface.DEFAULT : tf);
                 current.setVisibility(cur.equals(f.getAbsolutePath()) ? View.VISIBLE : View.GONE);
@@ -115,6 +108,13 @@ public final class FontChooser {
                     }
                 })
                 .show();
+    }
+
+    /** 字体显示名：文件名去掉扩展名。 */
+    private static String fontName(File f) {
+        String n = f.getName();
+        int dot = n.lastIndexOf('.');
+        return dot > 0 ? n.substring(0, dot) : n;
     }
 
     /** 读取并缓存字体；加载失败返回 null（该行用系统默认字体显示）。 */
