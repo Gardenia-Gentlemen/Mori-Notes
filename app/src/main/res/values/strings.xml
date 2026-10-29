@@ -17,6 +17,7 @@
     <string name="copyright_year">© 2026</string>
     <string name="copyright_holder">Gardenia-Gentlemen</string>
     <string name="about_close">关闭</string>
+    <string name="footer_copyright">© 2026 Gardenia-Gentlemen. Licensed under MIT.</string>
     <string name="grid_mode">宫格视图</string>
     <string name="list_mode">列表视图</string>
     <string name="export">导出</string>
