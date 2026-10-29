@@ -171,8 +171,8 @@ public class CountdownEditActivity extends BaseActivity {
         uiAnnivDays = item.annivType != Countdown.ANNIV_CALENDAR;
         uiRepeatUnit = item.repeatType == Countdown.REPEAT_NONE
                 ? Countdown.REPEAT_YEARLY : item.repeatType;
-        swAnniv.setChecked(item.annivType != Countdown.ANNIV_NONE);
-        swRepeat.setChecked(item.repeatType != Countdown.REPEAT_NONE);
+        swAnniv.setChecked(isNew || item.annivType != Countdown.ANNIV_NONE);
+        swRepeat.setChecked(isNew || item.repeatType != Countdown.REPEAT_NONE);
         swShowYear.setChecked(item.showYear);
         swShowMonth.setChecked(item.showMonth);
         swShowWeek.setChecked(item.showWeek);
@@ -515,24 +515,51 @@ public class CountdownEditActivity extends BaseActivity {
 
     /** 切换计数方式：累计模式看纪念日，倒数模式看重复。 */
     private void setMode(boolean up) {
+        if (uiUp == up) return;
         uiUp = up;
         applySegStyles();
+        bounce(up ? btnModeUp : btnModeDown);
         syncVisibility();
     }
 
     /** 切换纪念日形式：纪念天数 / 预设纪念。 */
     private void setAnnivKind(boolean days) {
+        if (uiAnnivDays == days) return;
         uiAnnivDays = days;
         applySegStyles();
+        bounce(days ? btnAnnivDays : btnAnnivCalendar);
         syncVisibility();
     }
 
     /** 切换重复单位，并同步间隔输入框的后缀文案。 */
     private void setRepeatUnit(int unit) {
+        if (uiRepeatUnit == unit) return;
         uiRepeatUnit = unit;
         applySegStyles();
+        bounce(repeatButton(unit));
         syncIntervalSuffix();
         syncVisibility();
+    }
+
+    private TextView repeatButton(int unit) {
+        switch (unit) {
+            case Countdown.REPEAT_MONTHLY: return btnRepMonth;
+            case Countdown.REPEAT_WEEKLY: return btnRepWeek;
+            case Countdown.REPEAT_DAILY: return btnRepDay;
+            default: return btnRepYear;
+        }
+    }
+
+    /** 选中反馈：轻微放大回弹。 */
+    private void bounce(View v) {
+        if (v == null) return;
+        v.animate().scaleX(1.06f).scaleY(1.06f).setDuration(90)
+                .setInterpolator(new PathInterpolator(0.2f, 0f, 0f, 1f))
+                .withEndAction(() -> v.animate().scaleX(1f).scaleY(1f)
+                        .setDuration(140)
+                        .setInterpolator(new PathInterpolator(0.2f, 0f, 0f, 1f))
+                        .start())
+                .start();
     }
 
     private void syncIntervalSuffix() {
@@ -548,7 +575,8 @@ public class CountdownEditActivity extends BaseActivity {
 
     /** 把分段控件的选中态绘画出来（背景 + 文字色）。 */
     private void applySegStyles() {
-        int on = 0xFF1B1B1F, off = 0xFF6B6B70;
+        int on = themeColor(com.google.android.material.R.attr.colorOnSurface);
+        int off = themeColor(com.google.android.material.R.attr.colorOnSurfaceVariant);
         segStyle(btnModeDown, !uiUp, on, off);
         segStyle(btnModeUp, uiUp, on, off);
         segStyle(btnAnnivDays, uiAnnivDays, on, off);
@@ -559,9 +587,18 @@ public class CountdownEditActivity extends BaseActivity {
         segStyle(btnRepDay, uiRepeatUnit == Countdown.REPEAT_DAILY, on, off);
     }
 
+    private int themeColor(int attr) {
+        android.util.TypedValue tv = new android.util.TypedValue();
+        if (getTheme().resolveAttribute(attr, tv, true)) {
+            if (tv.resourceId != 0) return androidx.core.content.ContextCompat.getColor(this, tv.resourceId);
+            return tv.data;
+        }
+        return 0xFF1B1B1F;
+    }
+
     private void segStyle(TextView v, boolean selected, int onColor, int offColor) {
         if (v == null) return;
-        v.setBackgroundResource(selected ? R.drawable.bg_seg_on : 0);
+        v.setBackgroundResource(selected ? R.drawable.bg_seg_on : R.drawable.bg_seg_ripple);
         v.setTextColor(selected ? onColor : offColor);
         v.setTypeface(null, selected ? android.graphics.Typeface.BOLD
                 : android.graphics.Typeface.NORMAL);
@@ -580,8 +617,8 @@ public class CountdownEditActivity extends BaseActivity {
         if (animate && content instanceof ViewGroup) {
             AutoTransition t = new AutoTransition();
             t.setOrdering(TransitionSet.ORDERING_TOGETHER);
-            t.setDuration(220);
-            t.setInterpolator(new DecelerateInterpolator());
+            t.setDuration(240);
+            t.setInterpolator(new PathInterpolator(0.2f, 0f, 0f, 1f));
             TransitionManager.beginDelayedTransition((ViewGroup) content, t);
         }
         groupAnniv.setVisibility(up ? View.VISIBLE : View.GONE);

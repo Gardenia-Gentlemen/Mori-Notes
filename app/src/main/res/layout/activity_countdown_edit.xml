@@ -342,7 +342,8 @@
                                 <com.google.android.material.materialswitch.MaterialSwitch
                                     android:id="@+id/sw_anniv"
                                     android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content" />
+                                    android:layout_height="wrap_content" android:checked="true"
+                                    />
                                 </LinearLayout>
                             <LinearLayout
                                 android:id="@+id/group_anniv_body"
@@ -493,7 +494,8 @@
                                 <com.google.android.material.materialswitch.MaterialSwitch
                                     android:id="@+id/sw_repeat"
                                     android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content" />
+                                    android:layout_height="wrap_content" android:checked="true"
+                                    />
                                 </LinearLayout>
                             <LinearLayout
                                 android:id="@+id/group_repeat_body"
