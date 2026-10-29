@@ -114,7 +114,7 @@ public class CountdownTimelineActivity extends BaseActivity {
         box.addView(tvTime);
 
         new MaterialAlertDialogBuilder(this)
-                .setTitle(isNew ? "新建回忆" : "修改内容")
+                .setTitle(isNew ? "新建回忆" : "修改回忆")
                 .setView(box)
                 .setNegativeButton("取消", null)
                 .setPositiveButton("保存", (d, w) -> {
@@ -148,11 +148,11 @@ public class CountdownTimelineActivity extends BaseActivity {
         showNoteDialog(null);
     }
 
-    /** 长按回忆节点：修改内容 / 删除。 */
+    /** 长按回忆节点：修改回忆 / 删除。 */
     private void showNoteMenu(TimelineNote n) {
         new MaterialAlertDialogBuilder(this)
                 .setTitle(TextUtils.isEmpty(n.text) ? "这条回忆" : n.text)
-                .setItems(new String[]{"修改内容", "删除这条回忆"}, (d, which) -> {
+                .setItems(new String[]{"修改回忆", "删除这条回忆"}, (d, which) -> {
                     if (which == 0) {
                         showNoteDialog(n);
                     } else {
