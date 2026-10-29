@@ -79,9 +79,6 @@
             android:name=".TodoEditActivity"
             android:parentActivityName=".MainActivity" />
         <activity
-            android:name=".CountdownTimelineActivity"
-            android:parentActivityName=".MainActivity" />
-        <activity
             android:name=".CountdownEditActivity"
             android:parentActivityName=".MainActivity" />
         <activity
