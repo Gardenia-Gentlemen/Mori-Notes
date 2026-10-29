@@ -427,7 +427,8 @@ public final class ShareUtils {
 
         TextView unit = new TextView(ctx);
         if (tfR != null) unit.setTypeface(tfR);
-        unit.setText(diff == 0 ? " 就是今天" : (diff > 0 ? " 天后" : " 天前"));
+        unit.setText(Countdown.MODE_UP.equals(c.mode) ? " 天"
+                : (diff == 0 ? " 就是今天" : (diff > 0 ? " 天后" : " 天前")));
         unit.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f * fs);
         unit.setTextColor(hasBg ? 0xF2FFFFFF : 0xFF6B6B70);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
