@@ -402,11 +402,20 @@ public final class ShareUtils {
 
         TextView date = new TextView(ctx);
         if (tfR != null) date.setTypeface(tfR);
-        date.setText(CountdownTime.formatDate(c.date) + (lunar.isEmpty() ? "" : " · " + lunar));
-        date.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f * fs);
+        date.setText(CountdownTime.formatDate(c.date));
+        date.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
         date.setTextColor(hasBg ? 0xF2FFFFFF : 0xFF6B6B70);
         date.setPadding(0, dp(ctx, 4), 0, 0);
         left.addView(date);
+        if (!lunar.isEmpty()) {
+            TextView lunarView = new TextView(ctx);
+            if (tfR != null) lunarView.setTypeface(tfR);
+            lunarView.setText(lunar);
+            lunarView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+            lunarView.setTextColor(hasBg ? 0xF2FFFFFF : 0xFF6B6B70);
+            lunarView.setPadding(0, dp(ctx, 2), 0, 0);
+            left.addView(lunarView);
+        }
 
         if (anniv != null && !anniv.isEmpty()) {
             TextView a = new TextView(ctx);
