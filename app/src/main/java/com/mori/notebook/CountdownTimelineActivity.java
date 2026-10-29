@@ -52,6 +52,10 @@ public class CountdownTimelineActivity extends BaseActivity {
             finish();
             return;
         }
+        if (!Countdown.MODE_UP.equals(c.mode)) {
+            finish();
+            return;
+        }
         bind(c);
         final String cid = c.id;
         toolbar.inflateMenu(R.menu.menu_countdown_timeline);
@@ -115,10 +119,6 @@ public class CountdownTimelineActivity extends BaseActivity {
         box.removeAllViews();
 
         List<Node> nodes = new ArrayList<>();
-        if (c.createdAt > 0) {
-            long createdDay = CountdownTime.dayNumber(c.createdAt);
-            nodes.add(new Node(createdDay, "创建", CountdownTime.formatDateShort(createdDay)));
-        }
         for (int m : MILESTONES) {
             long at = CountdownTime.addDays(c.date, -m);
             if (at >= today && at <= c.date) {
@@ -139,27 +139,38 @@ public class CountdownTimelineActivity extends BaseActivity {
     /** 应用该条倒数日的卡片背景与字体，与全屏页保持一致。 */
     private void applyLook(Countdown c) {
         fontPath = c.fontPath == null ? "" : c.fontPath;
+        int onSurfaceC = com.google.android.material.color.MaterialColors.getColor(this,
+                com.google.android.material.R.attr.colorOnSurface, 0xFF1C1B1F);
+        int onVariantC = com.google.android.material.color.MaterialColors.getColor(this,
+                com.google.android.material.R.attr.colorOnSurfaceVariant, 0xFF49454F);
         ImageView bg = findViewById(R.id.bg_image);
         View scrim = findViewById(R.id.bg_scrim);
         TextView title = findViewById(R.id.tv_title);
         TextView meta = findViewById(R.id.tv_meta);
         TextView num = findViewById(R.id.tv_num);
         TextView unit = findViewById(R.id.tv_unit);
-        CardBg.apply(this, c.bgUri, bg, scrim, title, meta, meta, num, unit,
-                0xFF1C1B1F, 0xFF6B6B70, 0xFF1C1B1F);
-        hasBg = bg.getVisibility() == View.VISIBLE;
+        CardBg.apply(this, c.bgUri, c.bgColor, bg, scrim, title, meta, meta, num, unit,
+                onSurfaceC, onVariantC, onSurfaceC);
+        hasBg = c.bgColor == CardBg.BG_APP
+                ? !BackgroundPrefs.isLightStyle(this)
+                : (c.bgColor != 0 || bg.getVisibility() == View.VISIBLE);
 
         title.setTypeface(Fonts.bold(this, fontPath));
         meta.setTypeface(Fonts.regular(this, fontPath));
         num.setTypeface(Fonts.bold(this, fontPath));
         unit.setTypeface(Fonts.regular(this, fontPath));
 
-        if (hasBg) {
-            LinearProgressIndicator progress2 = findViewById(R.id.progress);
-            progress2.setTrackColor(0x33FFFFFF);
-            progress2.setIndicatorColor(0xFFFFFFFF);
-        }
+        // 与全屏页相同的白字分级透明度
+        num.setTextColor(hasBg ? 0xFFFFFFFF : onSurfaceC);
+        title.setTextColor(hasBg ? 0xFFFFFFFF : onSurfaceC);
+        unit.setTextColor(hasBg ? 0x99FFFFFF : onVariantC);
+        meta.setTextColor(hasBg ? 0xBFFFFFFF : onVariantC);
+
+        LinearProgressIndicator progress2 = findViewById(R.id.progress);
+        progress2.setTrackColor(hasBg ? 0x33FFFFFF : 0x331C1B1F);
+        progress2.setIndicatorColor(hasBg ? 0xFFFFFFFF : onSurfaceC);
     }
+
     private static class Node {
         final long date;
         final String title;

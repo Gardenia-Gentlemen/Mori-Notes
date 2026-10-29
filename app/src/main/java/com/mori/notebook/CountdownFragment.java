@@ -86,8 +86,10 @@ public class CountdownFragment extends Fragment {
                 if (selecting) {
                     adapter.toggleSelection(item);
                     refreshTitle();
-                } else {
+                } else if (Countdown.MODE_UP.equals(item.mode)) {
                     openTimeline(item);
+                } else {
+                    openFullScreen(item);
                 }
             }
 
