@@ -31,6 +31,7 @@ public class MainActivity extends BaseActivity {
         setContentView(R.layout.activity_main);
         toolbar = findViewById(R.id.toolbar);
         nav = findViewById(R.id.bottom_nav);
+        applyNavTheme();
         pager = findViewById(R.id.view_pager);
         pager.setAdapter(new FragmentStateAdapter(this) {
             @NonNull
@@ -73,6 +74,16 @@ public class MainActivity extends BaseActivity {
         updateToolbar(PAGE_HOME);
         deliverOpenIntent(getIntent());
     }
+    /** 底栏底色/图标色取当前主题色，切深色模式后同步。 */
+    private void applyNavTheme() {
+        if (nav == null) return;
+        int primary = themeColor(com.google.android.material.R.attr.colorPrimary, 0xFF6750A4);
+        int onPrimary = themeColor(com.google.android.material.R.attr.colorOnPrimary, 0xFFFFFFFF);
+        nav.setBackgroundColor(primary);
+        nav.setItemIconTintList(android.content.res.ColorStateList.valueOf(onPrimary));
+        nav.setItemTextColor(android.content.res.ColorStateList.valueOf(onPrimary));
+    }
+
     /** 底栏菜单项 → 页面序号 */
     private int pageOf(int menuItemId) {
         if (menuItemId == R.id.action_nav_countdown) return PAGE_COUNTDOWN;
@@ -151,6 +162,7 @@ public class MainActivity extends BaseActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        applyNavTheme();
         if (homeFragment != null && homeFragment.isAdded()) homeFragment.applyToolbar();
     }
     /** 主页隐藏/显示底部导航（多选时隐藏） */

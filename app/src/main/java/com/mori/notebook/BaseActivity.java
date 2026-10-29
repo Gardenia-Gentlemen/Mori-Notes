@@ -31,6 +31,11 @@ public class BaseActivity extends AppCompatActivity {
         });
     }
 
+    /** 读当前主题色，随深/浅色主题自动变化。 */
+    protected int themeColor(int attr, int fallback) {
+        return com.google.android.material.color.MaterialColors.getColor(this, attr, fallback);
+    }
+
     protected void applyBackground() {
         android.view.View root = findViewById(R.id.root);
         if (root == null) return;
