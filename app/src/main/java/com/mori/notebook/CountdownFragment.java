@@ -43,6 +43,10 @@ public class CountdownFragment extends Fragment {
     private boolean selecting;
     /** 字体文件选择器 */
     private ActivityResultLauncher<Intent> fontPicker;
+    /** 卡片背景图选择器 */
+    private ActivityResultLauncher<Intent> bgPicker;
+    /** 当前等待选取背景图的倒数日 */
+    private Countdown pendingBgItem;
 
     @Nullable
     @Override
@@ -80,6 +84,20 @@ public class CountdownFragment extends Fragment {
                         reload();
                     }
                 });
+        bgPicker = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(), r -> {
+                    if (r.getResultCode() != android.app.Activity.RESULT_OK || r.getData() == null) {
+                        pendingBgItem = null;
+                        return;
+                    }
+                    Uri src = r.getData().getData();
+                    Countdown target = pendingBgItem;
+                    pendingBgItem = null;
+                    if (src == null || target == null || !isAdded()) {
+                        return;
+                    }
+                    CardBgPicker.applyPickedImage(requireContext(), target, src, this::reload);
+                });
         adapter = new CountdownAdapter(new CountdownAdapter.Listener() {
             @Override
             public void onClick(Countdown item) {
@@ -110,6 +128,16 @@ public class CountdownFragment extends Fragment {
             @Override
             public void onImportFont(Countdown item) {
                 showFontMenu(item);
+            }
+
+            @Override
+            public void onSetBackground(Countdown item, View anchor) {
+                showBgMenu(item, anchor);
+            }
+
+            @Override
+            public void onDelete(Countdown item) {
+                confirmDelete(item);
             }
             @Override
             public void onDragStart(RecyclerView.ViewHolder vh) {
@@ -452,6 +480,41 @@ public class CountdownFragment extends Fragment {
         }
         reload();
         applyToolbar();
+    }
+
+    /** 卡片三点菜单的「设置背景」：纯色 / 自定义图片 / 与应用背景相同 / 无背景。 */
+    private void showBgMenu(final Countdown item, View anchor) {
+        CardBgPicker.showMenu(requireContext(), anchor, item, () -> {
+            if (bgPicker == null) {
+                toast("图片选择器不可用");
+                return;
+            }
+            pendingBgItem = item;
+            try {
+                bgPicker.launch(Gallery.intent());
+            } catch (Exception e) {
+                pendingBgItem = null;
+                toast("无法打开相册");
+            }
+        }, this::reload);
+    }
+
+    /** 卡片三点菜单的「删除倒数日」：确认后移入回收站。 */
+    private void confirmDelete(final Countdown item) {
+        String name = item.title == null || item.title.trim().isEmpty()
+                ? "无标题" : item.title.trim();
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle("删除倒数日")
+                .setMessage("「" + name + "」将移入回收站，可在回收站中恢复。")
+                .setNegativeButton("取消", null)
+                .setPositiveButton("删除", (d, w) -> {
+                    if (pendingFontItem == item) pendingFontItem = null;
+                    if (pendingBgItem == item) pendingBgItem = null;
+                    store.delete(item.id);
+                    reload();
+                    toast("已删除，可在回收站恢复");
+                })
+                .show();
     }
 
     /** 选择该条倒数日的字体：跟随系统默认、从字体库选（选项以字体预览展示）、或导入新字体。 */

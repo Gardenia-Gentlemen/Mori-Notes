@@ -45,6 +45,10 @@ public class CountdownAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
 
         /** 三点菜单中的「选择字体」 */
         void onImportFont(Countdown item);
+        /** 三点菜单中的「设置背景」，anchor 为三点按钮 */
+        void onSetBackground(Countdown item, View anchor);
+        /** 三点菜单中的「删除倒数日」 */
+        void onDelete(Countdown item);
 
         /** 多选态下选中项数量变化 */
         void onSelectionChanged();
@@ -225,26 +229,34 @@ public class CountdownAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
         applySelectionStyle(h, sel);
     }
 
-    /** 右侧三点菜单：编辑、选择字体 */
+    /** 右侧三点菜单：分享图片、设置背景、编辑、选择字体、删除倒数日 */
     private void showMenu(View anchor, final Countdown c) {
         PopupMenu pm = new PopupMenu(anchor.getContext(), anchor);
-        pm.getMenu().add(0, 3, 0, "分享图片");
-        pm.getMenu().add(0, 1, 1, "编辑");
-        pm.getMenu().add(0, 2, 2, "选择字体");
+        pm.getMenu().add(0, 1, 0, "分享图片");
+        pm.getMenu().add(0, 2, 1, "设置背景");
+        pm.getMenu().add(0, 3, 2, "编辑");
+        pm.getMenu().add(0, 4, 3, "选择字体");
+        pm.getMenu().add(0, 5, 4, "删除倒数日");
         pm.setOnMenuItemClickListener(item -> {
-            if (item.getItemId() == 1) {
-                listener.onEdit(c);
-                return true;
+            switch (item.getItemId()) {
+                case 1:
+                    ShareUtils.shareCountdownAsImage(anchor.getContext(), c);
+                    return true;
+                case 2:
+                    listener.onSetBackground(c, anchor);
+                    return true;
+                case 3:
+                    listener.onEdit(c);
+                    return true;
+                case 4:
+                    listener.onImportFont(c);
+                    return true;
+                case 5:
+                    listener.onDelete(c);
+                    return true;
+                default:
+                    return false;
             }
-            if (item.getItemId() == 2) {
-                listener.onImportFont(c);
-                return true;
-            }
-            if (item.getItemId() == 3) {
-                ShareUtils.shareCountdownAsImage(anchor.getContext(), c);
-                return true;
-            }
-            return false;
         });
         pm.show();
     }
