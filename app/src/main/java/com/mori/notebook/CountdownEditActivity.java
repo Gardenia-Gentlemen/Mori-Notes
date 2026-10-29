@@ -325,7 +325,7 @@ public class CountdownEditActivity extends BaseActivity {
     private void confirmDelete() {
         new MaterialAlertDialogBuilder(this)
                 .setTitle("删除这个日子？")
-                .setMessage("删除后无法恢复。")
+                .setMessage("将移入回收站，可在回收站中恢复。")
                 .setNegativeButton("取消", null)
                 .setPositiveButton("删除", (d, w) -> {
                     store.delete(item.id);

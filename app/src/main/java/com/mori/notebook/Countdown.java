@@ -54,6 +54,13 @@ public class Countdown {
     /** 手动排序序号，越小越靠前；-1 表示未排序。 */
     public int sortIndex = -1;
 
+    /** 移入回收站的时间戳，0 表示未删除。 */
+    public long deletedAt = 0L;
+
+    public boolean inTrash() {
+        return deletedAt > 0L;
+    }
+
     public Countdown() {
     }
 
@@ -88,6 +95,7 @@ public class Countdown {
             o.put("bgColor", bgColor);
             o.put("fontPath", fontPath == null ? "" : fontPath);
             o.put("sortIndex", sortIndex);
+            o.put("deletedAt", deletedAt);
         } catch (Exception ignored) {
         }
         return o;
@@ -114,6 +122,7 @@ public class Countdown {
         c.bgColor = o.optInt("bgColor", 0);
         c.fontPath = o.optString("fontPath", "");
         c.sortIndex = o.optInt("sortIndex", -1);
+        c.deletedAt = o.optLong("deletedAt", 0L);
         if (c.id.isEmpty()) {
             c.id = UUID.randomUUID().toString();
         }

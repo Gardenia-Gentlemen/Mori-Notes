@@ -94,6 +94,7 @@ public class CountdownStore {
             }
         }
         if (dirty) save();
+        purgeExpired();
     }
     public void save() {
         JSONArray arr = new JSONArray();
@@ -115,7 +116,10 @@ public class CountdownStore {
     /** 排序：置顶优先；其后按手动序号；序号相同再按日期规则。 */
     public List<Countdown> getAll() {
         long today = CountdownTime.today();
-        List<Countdown> copy = new ArrayList<>(items);
+        List<Countdown> copy = new ArrayList<>();
+        for (Countdown c : items) {
+            if (!c.inTrash()) copy.add(c);
+        }
         Collections.sort(copy, (a, b) -> {
             if (a.pinned != b.pinned) return a.pinned ? -1 : 1;
             if (a.sortIndex != b.sortIndex) return Integer.compare(a.sortIndex, b.sortIndex);
@@ -189,17 +193,76 @@ public class CountdownStore {
         save();
     }
 
+    /** 软删除：移入回收站。 */
     public void delete(String id) {
-        items.removeIf(c -> c.id.equals(id));
+        Countdown c = find(id);
+        if (c != null && !c.inTrash()) c.deletedAt = System.currentTimeMillis();
         save();
     }
 
-    /** 批量删除（倒数日无回收站，直接移除） */
-    public void deleteBatch(List<String> ids) {
-        if (ids == null || ids.isEmpty()) {
-            return;
+    /** 批量软删除：移入回收站。 */
+    public int deleteBatch(List<String> ids) {
+        if (ids == null || ids.isEmpty()) return 0;
+        long now = System.currentTimeMillis();
+        int n = 0;
+        for (Countdown c : items) {
+            if (c.inTrash()) continue;
+            if (ids.contains(c.id)) {
+                c.deletedAt = now;
+                n++;
+            }
         }
-        items.removeIf(c -> ids.contains(c.id));
         save();
+        return n;
+    }
+
+    // ================= 回收站（与笔记回收站完全独立） =================
+
+    /** 回收站保留天数。 */
+    public static final long TRASH_KEEP_MS = 10L * 24 * 60 * 60 * 1000;
+
+    public Countdown findIncludingTrash(String id) {
+        return find(id);
+    }
+
+    /** 回收站列表，按删除时间倒序。 */
+    public List<Countdown> getTrash() {
+        List<Countdown> copy = new ArrayList<>();
+        for (Countdown c : items) {
+            if (c.inTrash()) copy.add(c);
+        }
+        Collections.sort(copy, (a, b) -> Long.compare(b.deletedAt, a.deletedAt));
+        return copy;
+    }
+
+    public long trashRemainMs(Countdown c) {
+        if (c == null || c.deletedAt <= 0L) return 0L;
+        long left = c.deletedAt + TRASH_KEEP_MS - System.currentTimeMillis();
+        return Math.max(0L, left);
+    }
+
+    /** 清理过期的回收站条目。 */
+    public void purgeExpired() {
+        long now = System.currentTimeMillis();
+        if (items.removeIf(c -> c.inTrash() && now - c.deletedAt >= TRASH_KEEP_MS)) save();
+    }
+
+    public void restore(String id) {
+        Countdown c = find(id);
+        if (c == null || !c.inTrash()) return;
+        c.deletedAt = 0L;
+        save();
+    }
+
+    public void deleteForever(String id) {
+        if (items.removeIf(c -> c.id.equals(id))) save();
+    }
+
+    public int clearTrash() {
+        int before = items.size();
+        items.removeIf(Countdown::inTrash);
+        int removed = before - items.size();
+        if (removed > 0) save();
+        return removed;
     }
 }

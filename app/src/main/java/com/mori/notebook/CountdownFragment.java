@@ -179,6 +179,10 @@ public class CountdownFragment extends Fragment {
             startActivity(new Intent(requireContext(), FontsActivity.class));
             return true;
         }
+        if (id == R.id.action_countdown_trash) {
+            startActivity(new Intent(requireContext(), CountdownTrashActivity.class));
+            return true;
+        }
         if (id == R.id.action_settings) {
             startActivity(new Intent(requireContext(), SettingsActivity.class));
             return true;
@@ -337,7 +341,7 @@ public class CountdownFragment extends Fragment {
         final int n = ids.size();
         new MaterialAlertDialogBuilder(requireContext())
                 .setTitle("删除 " + n + " 个倒数日")
-                .setMessage("删除后不可恢复。")
+                .setMessage("将移入回收站，可在回收站中恢复。")
                 .setNegativeButton("取消", null)
                 .setPositiveButton("删除", (d, w) -> {
                     store.deleteBatch(ids);
