@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""一键发版：构建 -> 归档源码 -> 提交推送 -> 建 Release(成品包 + 上一版本源代码)。
+"""一键发版：构建 -> 归档源码 -> 提交推送 -> 建 Release(成品包 + 本版本源码)。
 
 用法:
     export GH_TOKEN=ghp_xxx
@@ -9,8 +9,8 @@
     python3 tools/release.py 1.4 --dry-run      # 只打印计划，不动远端
 
 规则:
-    * 新版本源码快照进 releases/v<new>/src（供下个版本作为"上一版本源代码"使用）
-    * Release 附件 = notebook-v<new>.apk（成品包） + notebook-v<prev>-src.zip（上一版本源代码）
+    * 新版本源码快照进 releases/v<new>/src
+    * Release 附件 = notebook-v<new>.apk（成品包） + notebook-v<new>-src.zip（本版本源码）
     * Release 正文 = CHANGELOG.md 中 ## <new> (code) 章节
 """
 import argparse
@@ -257,14 +257,14 @@ def main():
     snapshot_src(v)
     if a.readme:
         update_readme_features(v, write=True)
-    prev_zip = zip_src(prev) if prev else None
+    cur_zip = zip_src(v)
 
     note = os.path.join(ROOT, "releases", "v" + v, "SOURCE.md")
     with open(note, "w", encoding="utf-8") as f:
         f.write("# v%s 源码\n\n本目录 `src/` 为 v%s 构建时的完整可编译工程"
                 "（已剔除 build/、local.properties、keystore.properties）。\n"
-                "下一版本发版时，它会被打包成 `notebook-v%s-src.zip` 作为"
-                " Release 附件「源代码」。\n" % (v, v, v))
+                "发版时它被打包成 `notebook-v%s-src.zip`，作为本版本"
+                " Release 的「源代码」附件。\n" % (v, v, v))
 
     tok = token()
     sh("git add -A")
@@ -287,8 +287,8 @@ def main():
     print("release v%s OK" % v)
 
     assets = [(apk, "notebook-v%s.apk" % v, "")]
-    if prev_zip:
-        assets.append((prev_zip, "notebook-v%s-src.zip" % prev, "源代码 (v%s)" % prev))
+    if cur_zip:
+        assets.append((cur_zip, "notebook-v%s-src.zip" % v, "源代码 (v%s)" % v))
     for path, name, label in assets:
         st, r2 = upload_asset(rel, path, name, label, tok)
         print(" asset %s -> %s %s" % (name, st, "" if st in (200, 201) else r2.get("message")))
