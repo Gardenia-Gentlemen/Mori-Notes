@@ -62,6 +62,29 @@ public final class Fonts {
         return t == null ? bold(ctx) : t[1];
     }
 
+    /** 水印用字体：优先字体库中的霞鹜文楷，找不到则回退系统衬线体。 */
+    public static Typeface watermark(Context ctx) {
+        try {
+            File dir = new File(ctx.getFilesDir(), "fonts");
+            File f = new File(dir, "楷书-霞鹜文楷.ttf");
+            if (f.isFile()) {
+                Typeface t = regular(ctx, f.getAbsolutePath());
+                if (t != null) return t;
+            }
+            File[] fs = dir.listFiles();
+            if (fs != null) {
+                for (File x : fs) {
+                    if (x.isFile() && x.getName().contains("霞鹜")) {
+                        Typeface t = regular(ctx, x.getAbsolutePath());
+                        if (t != null) return t;
+                    }
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        return Typeface.SERIF;
+    }
+
     private static synchronized Typeface[] byPath(String path) {
         Typeface[] cached = CACHE.get(path);
         if (cached != null) return cached;

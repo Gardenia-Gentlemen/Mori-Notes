@@ -234,7 +234,7 @@ public final class ShareUtils {
                 fbW = cardW;
                 fbMaxH = mh;
             }
-            if (bh <= canvasH - pad * 2) {
+            if (bh <= canvasH - pad * 2 - dp(ctx, 26)) {
                 bestCols = t;
                 bestParts = parts;
                 bestW = cardW;
@@ -278,6 +278,7 @@ public final class ShareUtils {
             drawCardShadow(ctx, canvas, dst, dp(ctx, 16) * scale);
             canvas.drawBitmap(b, null, dst, null);
         }
+        drawWatermark(ctx, canvas, canvasW, canvasH);
         return out;
     }
 
@@ -501,6 +502,17 @@ public final class ShareUtils {
 
     private static int clamp255(int v) {
         return v < 0 ? 0 : (v > 255 ? 255 : v);
+    }
+
+    /** 右下角水印：By Mori Notes，楷体（霞鹜文楷）。 */
+    private static void drawWatermark(Context ctx, Canvas canvas, int w, int h) {
+        Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+        p.setTypeface(Fonts.watermark(ctx));
+        p.setTextSize(dp(ctx, 13));
+        p.setTextAlign(Paint.Align.RIGHT);
+        p.setColor(0xCCFFFFFF);
+        p.setShadowLayer(dp(ctx, 4), 0, dp(ctx, 1), 0x66000000);
+        canvas.drawText("By Mori Notes", w - dp(ctx, 14), h - dp(ctx, 10), p);
     }
 
     /** 卡片投影：沿圆角矩形向外柔和投射。 */
