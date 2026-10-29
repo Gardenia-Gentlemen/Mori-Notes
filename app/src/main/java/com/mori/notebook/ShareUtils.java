@@ -421,9 +421,13 @@ public final class ShareUtils {
         TextView num = new TextView(ctx);
         if (tfB != null) num.setTypeface(tfB);
         num.setText(String.valueOf(abs));
-        num.setTextSize(TypedValue.COMPLEX_UNIT_SP, 34f * fs);
+        num.setTextSize(TypedValue.COMPLEX_UNIT_SP, 34f * fs * 1.5f);
         num.setTextColor(hasBg ? 0xFFFFFFFF : 0xFF1C1B1F);
-        row.addView(num);
+        LinearLayout.LayoutParams lpNum = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        lpNum.gravity = android.view.Gravity.BOTTOM;
+        lpNum.bottomMargin = dp(ctx, 6);
+        row.addView(num, lpNum);
 
         TextView unit = new TextView(ctx);
         if (tfR != null) unit.setTypeface(tfR);
@@ -511,8 +515,8 @@ public final class ShareUtils {
         p.setTypeface(Fonts.watermark(ctx));
         p.setTextSize(dp(ctx, 13));
         p.setTextAlign(Paint.Align.CENTER);
-        p.setColor(0x99FFFFFF);
-        p.setShadowLayer(dp(ctx, 4), 0, dp(ctx, 1), 0x55000000);
+        p.setColor(0x66FFFFFF);
+        p.setShadowLayer(dp(ctx, 4), 0, dp(ctx, 1), 0x40000000);
         canvas.drawText("By Mori Notes", w / 2f, h - dp(ctx, 10), p);
     }
 
