@@ -8,9 +8,7 @@
 package com.mori.notebook;
 
 import android.content.Intent;
-import android.graphics.Color;
 import android.graphics.Typeface;
-import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.Gravity;
@@ -21,10 +19,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.core.view.WindowCompat;
-import androidx.core.view.WindowInsetsControllerCompat;
 import com.google.android.material.appbar.MaterialToolbar;
-import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 
 import java.util.ArrayList;
@@ -58,10 +53,6 @@ public class CountdownTimelineActivity extends BaseActivity {
             return;
         }
         bind(c);
-        WindowInsetsControllerCompat ic =
-                WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
-        ic.setAppearanceLightStatusBars(!hasBg);
-        ic.setAppearanceLightNavigationBars(!hasBg);
         final String cid = c.id;
         toolbar.inflateMenu(R.menu.menu_countdown_timeline);
         toolbar.setOnMenuItemClickListener(m -> {
@@ -163,25 +154,10 @@ public class CountdownTimelineActivity extends BaseActivity {
         num.setTypeface(Fonts.bold(this, fontPath));
         unit.setTypeface(Fonts.regular(this, fontPath));
 
-        MaterialToolbar toolbar = findViewById(R.id.toolbar);
-        MaterialCardView card = findViewById(R.id.card);
-        LinearProgressIndicator progress = findViewById(R.id.progress);
-        Drawable nav = toolbar.getNavigationIcon();
         if (hasBg) {
-            toolbar.setBackgroundColor(Color.TRANSPARENT);
-            toolbar.setTitleTextColor(0xFFFFFFFF);
-            if (nav != null) nav.setTint(0xFFFFFFFF);
-            card.setCardBackgroundColor(0x1F000000);
-            progress.setTrackColor(0x33FFFFFF);
-            progress.setIndicatorColor(0xFFFFFFFF);
-        } else {
-            int surface = com.google.android.material.color.MaterialColors.getColor(
-                    this, com.google.android.material.R.attr.colorSurface, 0xFFFDFCFF);
-            int onSurface = com.google.android.material.color.MaterialColors.getColor(
-                    this, com.google.android.material.R.attr.colorOnSurface, 0xFF1C1B1F);
-            toolbar.setBackgroundColor(surface);
-            toolbar.setTitleTextColor(onSurface);
-            if (nav != null) nav.setTint(onSurface);
+            LinearProgressIndicator progress2 = findViewById(R.id.progress);
+            progress2.setTrackColor(0x33FFFFFF);
+            progress2.setIndicatorColor(0xFFFFFFFF);
         }
     }
     private static class Node {
@@ -232,16 +208,14 @@ public class CountdownTimelineActivity extends BaseActivity {
         TextView main = new TextView(this);
         main.setText(node.title);
         main.setTextSize(15);
-        main.setTypeface(past ? Fonts.regular(this, fontPath) : Fonts.bold(this, fontPath));
-        main.setTextColor(hasBg ? (past ? 0xCCFFFFFF : 0xFFFFFFFF)
-                : (past ? 0xFF6B6B70 : 0xFF1C1B1F));
+        main.setTypeface(Typeface.DEFAULT, past ? Typeface.NORMAL : Typeface.BOLD);
+        main.setTextColor(past ? 0xFF6B6B70 : 0xFF1C1B1F);
         texts.addView(main);
 
         TextView sub = new TextView(this);
         sub.setText(node.sub);
         sub.setTextSize(12);
-        sub.setTypeface(Fonts.regular(this, fontPath));
-        sub.setTextColor(hasBg ? 0xBFFFFFFF : 0xFF6B6B70);
+        sub.setTextColor(0xFF6B6B70);
         sub.setPadding(0, dp(2), 0, dp(16));
         texts.addView(sub);
 

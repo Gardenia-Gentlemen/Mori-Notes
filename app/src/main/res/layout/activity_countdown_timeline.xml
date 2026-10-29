@@ -1,32 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?attr/colorSurface">
-    <ImageView
-        android:id="@+id/bg_image"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:contentDescription="@null"
-        android:importantForAccessibility="no"
-        android:scaleType="centerCrop"
-        android:visibility="gone" />
-    <View
-        android:id="@+id/bg_scrim"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="#000000"
-        android:visibility="gone" />
-    <LinearLayout
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:background="?attr/colorSurface"
     android:orientation="vertical">
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:background="@android:color/transparent"
+        android:background="?attr/colorSurface"
         app:navigationIcon="?attr/homeAsUpIndicator"
         app:title="时间轴"
         app:titleTextColor="?attr/colorOnSurface" />
@@ -50,6 +33,23 @@
                 app:cardCornerRadius="24dp"
                 app:cardElevation="0dp"
                 app:cardBackgroundColor="?attr/colorSurfaceContainerHigh">
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    <ImageView
+                        android:id="@+id/bg_image"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:contentDescription="@null"
+                        android:importantForAccessibility="no"
+                        android:scaleType="centerCrop"
+                        android:visibility="gone" />
+                    <View
+                        android:id="@+id/bg_scrim"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="#000000"
+                        android:visibility="gone" />
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -96,6 +96,7 @@
                         app:trackCornerRadius="4dp"
                         app:trackThickness="8dp" />
                 </LinearLayout>
+                </FrameLayout>
             </com.google.android.material.card.MaterialCardView>
             <LinearLayout
                 android:id="@+id/timeline_box"
@@ -106,4 +107,3 @@
         </LinearLayout>
     </ScrollView>
 </LinearLayout>
-</FrameLayout>
