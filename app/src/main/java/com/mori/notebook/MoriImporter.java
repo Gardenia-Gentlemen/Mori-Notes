@@ -132,6 +132,8 @@ public final class MoriImporter {
             if (c.id == null || c.id.trim().isEmpty() || store.find(c.id) != null) {
                 c.id = java.util.UUID.randomUUID().toString();
             }
+            // 备份导入的倒数日不参与 24 小时补录窗口
+            c.imported = true;
             store.put(c);
             added++;
         }

@@ -12,6 +12,8 @@ import android.app.TimePickerDialog;
 import android.content.Intent;
 import android.graphics.Typeface;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.View;
@@ -109,16 +111,23 @@ public class CountdownTimelineActivity extends BaseActivity {
         final TextView tvTime = new TextView(this);
         tvTime.setTextSize(12);
         tvTime.setPadding(0, dp(8), 0, 0);
+        final Handler ticker = new Handler(Looper.getMainLooper());
         final Runnable refreshTime = () -> {
             SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault());
             fmt.setTimeZone(CountdownTime.timeZone());
             String val = fmt.format(new Date(picked[0]));
             if (canBackfill) {
-                tvTime.setText("时间：" + val + "\n（点击可修改，可选过去的日期与时刻；创建 24 小时内可补录旧回忆）");
+                // 24 小时窗口自倒数日创建时刻起算，剩余时间随时间递减
+                long left = item.createdAt + Countdown.BACKFILL_WINDOW_MS - System.currentTimeMillis();
+                if (left < 0L) left = 0L;
+                tvTime.setText("时间：" + val
+                        + "\n24 小时内可补录旧回忆，过时不可补录（剩 "
+                        + (left / 3600000L) + " 小时 " + (left % 3600000L) / 60000L
+                        + " 分，点击可改时间）");
             } else if (isNew) {
                 tvTime.setText("时间：保存时自动取本机当前时间\n" + val);
             } else {
-                tvTime.setText("时间：已超过 24 小时，创建后固定，不可修改\n" + val);
+                tvTime.setText("时间：创建后固定，修改不会改变\n" + val);
             }
         };
         refreshTime.run();
@@ -127,10 +136,17 @@ public class CountdownTimelineActivity extends BaseActivity {
                 picked[0] = ms;
                 refreshTime.run();
             }));
+            ticker.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    refreshTime.run();
+                    ticker.postDelayed(this, 60000L);
+                }
+            }, 60000L);
         }
         box.addView(tvTime);
 
-        new MaterialAlertDialogBuilder(this)
+        final androidx.appcompat.app.AlertDialog dlg = new MaterialAlertDialogBuilder(this)
                 .setTitle(isNew ? "新建回忆" : "修改回忆")
                 .setView(box)
                 .setNegativeButton("取消", null)
@@ -162,7 +178,9 @@ public class CountdownTimelineActivity extends BaseActivity {
                     }
                     bind(item);
                 })
-                .show();
+                .create();
+        dlg.setOnDismissListener(dd -> ticker.removeCallbacksAndMessages(null));
+        dlg.show();
     }
 
     private interface TimePick {

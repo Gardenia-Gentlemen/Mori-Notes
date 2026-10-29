@@ -56,6 +56,8 @@ public class Countdown {
 
     /** 移入回收站的时间戳，0 表示未删除。 */
     public long deletedAt = 0L;
+    /** 由整机备份导入的记录：不允许补录/修改回忆时间。 */
+    public boolean imported = false;
 
     public boolean inTrash() {
         return deletedAt > 0L;
@@ -66,6 +68,7 @@ public class Countdown {
 
     /** 是否仍处于「可设置/修改回忆时间」的窗口期（累计模式创建后 24 小时内）。 */
     public boolean canBackfillNoteTime() {
+        if (imported) return false;
         if (!MODE_UP.equals(mode)) return false;
         if (createdAt <= 0L) return false;
         long used = System.currentTimeMillis() - createdAt;
@@ -107,6 +110,7 @@ public class Countdown {
             o.put("fontPath", fontPath == null ? "" : fontPath);
             o.put("sortIndex", sortIndex);
             o.put("deletedAt", deletedAt);
+            o.put("imported", imported);
         } catch (Exception ignored) {
         }
         return o;
@@ -134,6 +138,7 @@ public class Countdown {
         c.fontPath = o.optString("fontPath", "");
         c.sortIndex = o.optInt("sortIndex", -1);
         c.deletedAt = o.optLong("deletedAt", 0L);
+        c.imported = o.optBoolean("imported", false);
         if (c.id.isEmpty()) {
             c.id = UUID.randomUUID().toString();
         }
