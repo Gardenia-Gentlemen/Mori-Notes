@@ -14,17 +14,23 @@ import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 
 import java.util.ArrayList;
+import java.text.SimpleDateFormat;
 import java.util.Collections;
+import java.util.Date;
+import java.util.Locale;
 import java.util.List;
+import java.util.TimeZone;
 
 /** 单个倒数日的时间轴视图 */
 public class CountdownTimelineActivity extends BaseActivity {
@@ -34,6 +40,8 @@ public class CountdownTimelineActivity extends BaseActivity {
     private boolean hasBg = false;
     /** 该条倒数日的专属字体路径，空则跟随系统 */
     private String fontPath = "";
+    /** 当前展示的倒数日 */
+    private Countdown item;
 
     private int dp(float v) {
         return Math.round(v * getResources().getDisplayMetrics().density);
@@ -56,6 +64,7 @@ public class CountdownTimelineActivity extends BaseActivity {
             finish();
             return;
         }
+        item = c;
         bind(c);
         applyCardRatio();
         final String cid = c.id;
@@ -69,6 +78,57 @@ public class CountdownTimelineActivity extends BaseActivity {
             }
             return false;
         });
+        findViewById(R.id.fab_add).setOnClickListener(v -> showAddDialog());
+    }
+
+    /** 右下角新建：记录一条手记，时间强制取本机当前时间与时区。 */
+    private void showAddDialog() {
+        if (item == null) return;
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(24), dp(8), dp(24), 0);
+
+        final EditText etText = new EditText(this);
+        etText.setHint("文字");
+        etText.setSingleLine(false);
+        box.addView(etText);
+
+        final EditText etPlace = new EditText(this);
+        etPlace.setHint("地点");
+        box.addView(etPlace);
+
+        TimeZone tz = TimeZone.getDefault();
+        SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+        fmt.setTimeZone(tz);
+        TextView tvTime = new TextView(this);
+        tvTime.setTextSize(12);
+        tvTime.setPadding(0, dp(8), 0, 0);
+        tvTime.setText("时间：保存时自动取本机当前时间\n"
+                + fmt.format(new Date()) + " · " + tz.getID());
+        box.addView(tvTime);
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("新建时间轴")
+                .setView(box)
+                .setNegativeButton("取消", null)
+                .setPositiveButton("保存", (d, w) -> {
+                    String text = etText.getText().toString().trim();
+                    String place = etPlace.getText().toString().trim();
+                    if (text.isEmpty() && place.isEmpty()) {
+                        Toast.makeText(this, "写点什么吧", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    TimelineNote n = new TimelineNote();
+                    n.id = java.util.UUID.randomUUID().toString();
+                    n.countdownId = item.id;
+                    n.text = text;
+                    n.place = place;
+                    n.timeMs = System.currentTimeMillis();
+                    n.timeZone = TimeZone.getDefault().getID();
+                    TimelineNoteStore.get(this).add(n);
+                    bind(item);
+                })
+                .show();
     }
 
     private void bind(Countdown c) {
@@ -127,6 +187,22 @@ public class CountdownTimelineActivity extends BaseActivity {
                         + (LunarUtil.format(at).isEmpty() ? "" : " · " + LunarUtil.format(at))));
             }
         }
+        // 手记节点：文字 + 地点 + 记录时间（含时区）
+        for (TimelineNote n : TimelineNoteStore.get(this).list(c.id)) {
+            StringBuilder sub = new StringBuilder();
+            if (!TextUtils.isEmpty(n.place)) sub.append(n.place).append(" · ");
+            SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault());
+            if (!TextUtils.isEmpty(n.timeZone)) f.setTimeZone(TimeZone.getTimeZone(n.timeZone));
+            sub.append(f.format(new Date(n.timeMs)));
+            if (!TextUtils.isEmpty(n.timeZone)) {
+                sub.append(" ").append(TimeZone.getTimeZone(n.timeZone)
+                        .getDisplayName(false, TimeZone.SHORT));
+            }
+            String main = TextUtils.isEmpty(n.text) ? "记录" : n.text;
+            nodes.add(new Node(n.timeMs, main, sub.toString(), true));
+        }
+        Collections.sort(nodes, (x, y) -> Long.compare(x.date, y.date));
+
         String endTitle = diff == 0 ? "就是今天" : (diff > 0 ? "目标日" : "已过去 " + (-diff) + " 天");
         nodes.add(new Node(c.date, endTitle, CountdownTime.formatDate(c.date)
                 + (lunar.isEmpty() ? "" : " · " + lunar)));
@@ -188,11 +264,18 @@ public class CountdownTimelineActivity extends BaseActivity {
         final long date;
         final String title;
         final String sub;
+        /** 是否为用户手记（样式上突出显示）。 */
+        final boolean note;
 
         Node(long date, String title, String sub) {
+            this(date, title, sub, false);
+        }
+
+        Node(long date, String title, String sub, boolean note) {
             this.date = date;
             this.title = title;
             this.sub = sub;
+            this.note = note;
         }
     }
 
@@ -232,8 +315,11 @@ public class CountdownTimelineActivity extends BaseActivity {
         TextView main = new TextView(this);
         main.setText(node.title);
         main.setTextSize(15);
-        main.setTypeface(Typeface.DEFAULT, past ? Typeface.NORMAL : Typeface.BOLD);
-        main.setTextColor(past ? 0xFF6B6B70 : 0xFF1C1B1F);
+        main.setTypeface(Typeface.DEFAULT, (past && !node.note) ? Typeface.NORMAL : Typeface.BOLD);
+        main.setTextColor(node.note
+                ? com.google.android.material.color.MaterialColors.getColor(this,
+                        com.google.android.material.R.attr.colorPrimary, 0xFF6750A4)
+                : (past ? 0xFF6B6B70 : 0xFF1C1B1F));
         texts.addView(main);
 
         TextView sub = new TextView(this);
