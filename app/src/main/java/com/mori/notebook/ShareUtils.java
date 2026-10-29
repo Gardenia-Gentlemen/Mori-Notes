@@ -439,7 +439,7 @@ public final class ShareUtils {
         LinearLayout.LayoutParams lpNum = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         lpNum.gravity = android.view.Gravity.BOTTOM;
-        lpNum.bottomMargin = -dp(ctx, 12);
+        lpNum.bottomMargin = 0;
         row.addView(num, lpNum);
 
         TextView unit = new TextView(ctx);
@@ -452,7 +452,7 @@ public final class ShareUtils {
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         lp.leftMargin = dp(ctx, 2);
         lp.gravity = android.view.Gravity.BOTTOM;
-        lp.bottomMargin = -dp(ctx, 12);
+        lp.bottomMargin = 0;
         row.addView(unit, lp);
 
         int wSpec = View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY);
