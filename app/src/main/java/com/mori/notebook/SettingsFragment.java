@@ -181,13 +181,9 @@ public class SettingsFragment extends Fragment {
         tvLocation.setText(NoteStore.get(requireContext()).locationLabel());
 
         TextView tvVer = v.findViewById(R.id.tv_version);
-        try {
-            android.content.pm.PackageInfo pi = requireContext().getPackageManager()
-                    .getPackageInfo(requireContext().getPackageName(), 0);
-            tvVer.setText("版本 " + pi.versionName + "  (" + pi.versionCode + ")");
-        } catch (Exception e) {
-            tvVer.setText("版本未知");
-        }
+        tvVer.setText(versionLabel());
+        View cardAbout = v.findViewById(R.id.card_about);
+        cardAbout.setOnClickListener(x -> showAboutDialog());
         MaterialButton btnLic = v.findViewById(R.id.btn_licenses);
         btnLic.setOnClickListener(x -> showOpenSourceLicense());
 
@@ -722,5 +718,25 @@ public class SettingsFragment extends Fragment {
 
     private void toast(String s) {
         if (isAdded()) Toast.makeText(requireContext(), s, Toast.LENGTH_SHORT).show();
+    }
+
+    private String versionLabel() {
+        try {
+            android.content.pm.PackageInfo pi = requireContext().getPackageManager()
+                    .getPackageInfo(requireContext().getPackageName(), 0);
+            return "v" + pi.versionName;
+        } catch (Exception e) {
+            return "v未知";
+        }
+    }
+
+    private void showAboutDialog() {
+        View dv = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_about, null);
+        TextView tv = dv.findViewById(R.id.tv_about_version);
+        tv.setText(versionLabel());
+        androidx.appcompat.app.AlertDialog dlg =
+                new MaterialAlertDialogBuilder(requireContext()).setView(dv).create();
+        dv.findViewById(R.id.btn_about_close).setOnClickListener(x -> dlg.dismiss());
+        dlg.show();
     }
 }

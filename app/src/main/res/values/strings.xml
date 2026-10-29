@@ -9,7 +9,14 @@
     <string name="empty_hint">还没有笔记，点右下角 + 新建</string>
     <string name="md_hint">在这里写 Markdown…\n\n# 标题\n**粗体** *斜体* `代码`\n- 列表\n- [ ] 待办\n&gt; 引用\n```\n代码块\n```</string>
     <string name="settings">设置</string>
-    <string name="footer_copyright">© 2026 Gardenia-Gentlemen. Licensed under MIT.</string>
+    <string name="about">关于</string>
+    <string name="about_title">关于 Mori Notes</string>
+    <string name="about_author">Mori Notes — Maintained by Gardenia-Gentlemen</string>
+    <string name="license">License</string>
+    <string name="license_mit">MIT License</string>
+    <string name="copyright_year">© 2026</string>
+    <string name="copyright_holder">Gardenia-Gentlemen</string>
+    <string name="about_close">关闭</string>
     <string name="grid_mode">宫格视图</string>
     <string name="list_mode">列表视图</string>
     <string name="export">导出</string>
