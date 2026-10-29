@@ -23,8 +23,37 @@
 - **纯色背景取色**：色盘下方新增黑、白、红、橙、黄、绿、青、蓝、紫 9 个常用色圆点，点一下即取；也可直接输入颜色值，支持 `#RRGGBB`、`RRGGBB`、`#RGB`、`255,87,51`、`255 87 51` 五种写法，写错会在弹窗内提示。
 - **与应用背景相同**：背景菜单新增此选项，倒数日全屏页直接用应用全局背景（与设置里选的预设/渐变/图片完全一致，含深色蒙版），文字颜色按背景明暗自动切黑/白；与纯色、图片可随时互切，切换时清理旧的图片副本。
 
-- compileSdk 34 / minSdk 24 / targetSdk 34，Java 17
-- Gradle 8.9 + AGP 8.5，依赖 appcompat 1.7.0 / recyclerview 1.3.2 / material 1.12.0 / viewpager2 1.1.0-beta02 / fragment 1.5.4
+## 环境
+
+**运行环境**
+
+| 项目 | 值 |
+| --- | --- |
+| 最低系统 | Android 7.0（API 24） |
+| 目标系统 | Android 17（API 37） |
+| 支持范围 | Android 7.0 ~ 17 |
+
+**构建环境**
+
+| 项目 | 值 |
+| --- | --- |
+| compileSdk | 37 |
+| minSdk | 24 |
+| targetSdk | 37 |
+| Java | 17 |
+| Gradle | 9.8.2 |
+| AGP | 9.5.0 |
+| Build Tools | 37.0.0 |
+
+**依赖**：appcompat 1.7.0 / recyclerview 1.3.2 / material 1.12.0 / viewpager2 1.1.0-beta02 / fragment 1.5.4 / zip4j 2.11.5
+
+**构建命令**
+
+```bash
+gradle assembleRelease
+```
+
+输出：`app/build/outputs/apk/release/app-release.apk`
 
 见 [CHANGELOG.md](CHANGELOG.md)。
 
