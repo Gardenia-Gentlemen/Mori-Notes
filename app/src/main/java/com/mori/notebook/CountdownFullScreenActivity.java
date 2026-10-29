@@ -509,6 +509,39 @@ public class CountdownFullScreenActivity extends BaseActivity {
         hexNow.setText("当前 " + ColorCodes.hex(wheel.getColor()));
         box.addView(hexNow);
 
+        // 常用颜色：黑白红橙黄绿青蓝紫，插在色盘正下方
+        final int[] presetColors = {0xFF000000, 0xFFFFFFFF, 0xFFE53935, 0xFFFB8C00,
+                0xFFFDD835, 0xFF43A047, 0xFF00ACC1, 0xFF1E88E5, 0xFF8E24AA};
+        final String[] presetNames = {"黑", "白", "红", "橙", "黄", "绿", "青", "蓝", "紫"};
+        LinearLayout presets = new LinearLayout(this);
+        presets.setOrientation(LinearLayout.HORIZONTAL);
+        presets.setGravity(Gravity.CENTER);
+        for (int i = 0; i < presetColors.length; i++) {
+            final int pc = presetColors[i];
+            View dot = new View(this);
+            android.graphics.drawable.GradientDrawable gd =
+                    new android.graphics.drawable.GradientDrawable();
+            gd.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+            gd.setColor(pc);
+            gd.setStroke(dp(1), 0x33000000);
+            dot.setBackground(gd);
+            dot.setContentDescription(presetNames[i]);
+            LinearLayout.LayoutParams dlp =
+                    new LinearLayout.LayoutParams(dp(26), dp(26));
+            dlp.setMarginEnd(dp(7));
+            presets.addView(dot, dlp);
+            dot.setOnClickListener(v -> {
+                wheel.setColor(pc);
+                bright.setProgress(Math.round(wheel.getValue() * 100f));
+                preview.setBackgroundColor(wheel.getColor());
+                hexNow.setText("当前 " + ColorCodes.hex(wheel.getColor()));
+            });
+        }
+        LinearLayout.LayoutParams presetsLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        presetsLp.topMargin = dp(14);
+        box.addView(presets, 1, presetsLp);
+
         final EditText et = new EditText(this);
         et.setSingleLine(true);
         et.setTextSize(13);
