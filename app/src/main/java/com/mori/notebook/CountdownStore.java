@@ -159,6 +159,7 @@ public class CountdownStore {
             existing.showWeek = c.showWeek;
             existing.repeatType = c.repeatType;
             existing.repeatAnchorDate = c.repeatAnchorDate;
+            existing.repeatInterval = c.repeatInterval;
             existing.bgUri = c.bgUri;
             existing.sortIndex = c.sortIndex;
         } else {

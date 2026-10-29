@@ -288,143 +288,296 @@
                             android:textAppearance="?attr/textAppearanceLabelLarge"
                             android:textColor="?attr/colorPrimary" />
 
-                        <RadioGroup
-                            android:id="@+id/rg_mode"
+                                                <LinearLayout
+                            android:id="@+id/seg_mode"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:orientation="vertical">
-                            <com.google.android.material.radiobutton.MaterialRadioButton
-                                android:id="@+id/rb_down"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:checked="true"
-                                android:text="倒数（距离这天还有多久）"
-                                android:textAppearance="?attr/textAppearanceBodyLarge" />
-                            <com.google.android.material.radiobutton.MaterialRadioButton
-                                android:id="@+id/rb_up"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="累计（这天已经过去多久）"
-                                android:textAppearance="?attr/textAppearanceBodyLarge" />
-                        </RadioGroup>
-
-                        <TextView
-                            android:id="@+id/label_anniv"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="12dp"
-                            android:text="纪念日"
-                            android:textAppearance="?attr/textAppearanceLabelLarge"
-                            android:textColor="?attr/colorPrimary" />
-
-                        <RadioGroup
-                            android:id="@+id/rg_anniv"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical">
-                            <com.google.android.material.radiobutton.MaterialRadioButton
-                                android:id="@+id/rb_anniv_none"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:checked="true"
-                                android:text="不显示"
-                                android:textAppearance="?attr/textAppearanceBodyLarge" />
-                            <com.google.android.material.radiobutton.MaterialRadioButton
-                                android:id="@+id/rb_anniv_days"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="按天数记（第 N 次）"
-                                android:textAppearance="?attr/textAppearanceBodyLarge" />
-                            <com.google.android.material.radiobutton.MaterialRadioButton
-                                android:id="@+id/rb_anniv_calendar"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="按年月记（第 N 年 / 月 / 周）"
-                                android:textAppearance="?attr/textAppearanceBodyLarge" />
-                        </RadioGroup>
-
-                        <LinearLayout
-                            android:id="@+id/group_custom_days"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:gravity="center_vertical"
+                            android:layout_marginTop="10dp"
+                            android:background="@drawable/bg_seg_container"
                             android:orientation="horizontal"
-                            android:visibility="gone">
-                            <TextView
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:text="间隔天数"
-                                android:textAppearance="?attr/textAppearanceBodyLarge"
-                                android:textColor="?attr/colorOnSurface" />
-                            <EditText
-                                android:id="@+id/et_custom_days"
-                                android:layout_width="96dp"
-                                android:layout_height="wrap_content"
-                                android:gravity="end"
-                                android:hint="100"
-                                android:inputType="number"
-                                android:maxLength="5"
-                                android:textAppearance="?attr/textAppearanceTitleMedium"
-                                android:textColor="?attr/colorOnSurface"
-                                android:textColorHint="?attr/colorOutline"
-                                android:importantForAutofill="no" />
-                        </LinearLayout>
-
-                        <EditText
-                            android:id="@+id/et_anniv_message"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
-                            android:hint="自定义文案（可选，留空自动生成）"
-                            android:inputType="textCapSentences"
-                            android:maxLines="2"
-                            android:minHeight="48dp"
-                            android:textAppearance="?attr/textAppearanceBodyMedium"
-                            android:textColor="?attr/colorOnSurface"
-                            android:textColorHint="?attr/colorOutline"
-                            android:importantForAutofill="no" />
-
+                            android:padding="4dp">
                         <TextView
-                            android:id="@+id/label_repeat"
-                            android:layout_width="match_parent"
+                            android:id="@+id/btn_mode_down"
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="12dp"
-                            android:text="重复"
-                            android:textAppearance="?attr/textAppearanceLabelLarge"
-                            android:textColor="?attr/colorPrimary" />
-
-                        <RadioGroup
-                            android:id="@+id/rg_repeat"
+                            android:layout_weight="1"
+                            android:drawableStart="@drawable/ic_mode_down"
+                            android:drawablePadding="8dp"
+                            android:gravity="center"
+                            android:paddingTop="12dp"
+                            android:paddingBottom="12dp"
+                            android:text="倒数模式"
+                            android:textAppearance="?attr/textAppearanceBodyLarge" />
+                        <TextView
+                            android:id="@+id/btn_mode_up"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:drawableStart="@drawable/ic_mode_up"
+                            android:drawablePadding="8dp"
+                            android:gravity="center"
+                            android:paddingTop="12dp"
+                            android:paddingBottom="12dp"
+                            android:text="累计模式"
+                            android:textAppearance="?attr/textAppearanceBodyLarge" />
+                        </LinearLayout>
+                        <LinearLayout
+                            android:id="@+id/group_anniv"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical">
-                            <com.google.android.material.radiobutton.MaterialRadioButton
-                                android:id="@+id/rb_repeat_none"
+                            <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:checked="true"
-                                android:text="不重复"
-                                android:textAppearance="?attr/textAppearanceBodyLarge" />
-                            <com.google.android.material.radiobutton.MaterialRadioButton
-                                android:id="@+id/rb_repeat_yearly"
+                                android:layout_marginTop="14dp"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="纪念日"
+                                    android:textAppearance="?attr/textAppearanceLabelLarge"
+                                    android:textColor="?attr/colorPrimary" />
+                                <com.google.android.material.materialswitch.MaterialSwitch
+                                    android:id="@+id/sw_anniv"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content" />
+                                </LinearLayout>
+                            <LinearLayout
+                                android:id="@+id/group_anniv_body"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="每年"
-                                android:textAppearance="?attr/textAppearanceBodyLarge" />
-                            <com.google.android.material.radiobutton.MaterialRadioButton
-                                android:id="@+id/rb_repeat_monthly"
+                                android:layout_marginTop="8dp"
+                                android:background="@drawable/bg_panel"
+                                android:orientation="vertical"
+                                android:padding="12dp">
+                                <LinearLayout
+                                    android:id="@+id/seg_anniv"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:background="@drawable/bg_seg_container"
+                                    android:orientation="horizontal"
+                                    android:padding="4dp">
+                        <TextView
+                            android:id="@+id/btn_anniv_days"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:paddingTop="12dp"
+                            android:paddingBottom="12dp"
+                            android:text="纪念天数"
+                            android:textAppearance="?attr/textAppearanceBodyLarge" />
+                        <TextView
+                            android:id="@+id/btn_anniv_calendar"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:paddingTop="12dp"
+                            android:paddingBottom="12dp"
+                            android:text="预设纪念"
+                            android:textAppearance="?attr/textAppearanceBodyLarge" />
+                                </LinearLayout>
+                                <com.google.android.material.textfield.TextInputLayout
+                                    android:id="@+id/til_custom_days"
+                                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="12dp"
+                                    android:hint="自定义周期（N 天）">
+                                    <com.google.android.material.textfield.TextInputEditText
+                                        android:id="@+id/et_custom_days"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:hint="100"
+                                        android:inputType="number"
+                                        android:maxLength="5"
+                                        android:textAppearance="?attr/textAppearanceTitleMedium"
+                                        android:importantForAutofill="no" />
+                                </com.google.android.material.textfield.TextInputLayout>
+                                <LinearLayout
+                                    android:id="@+id/group_show_cal"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical">
+                                    <LinearLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:gravity="center_vertical"
+                                        android:orientation="horizontal"
+                                        android:paddingTop="8dp">
+                                        <TextView
+                                            android:layout_width="0dp"
+                                            android:layout_height="wrap_content"
+                                            android:layout_weight="1"
+                                            android:text="年"
+                                            android:textAppearance="?attr/textAppearanceBodyLarge" />
+                                        <com.google.android.material.materialswitch.MaterialSwitch
+                                            android:id="@+id/sw_show_year"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content" />
+                                    </LinearLayout>
+                                    <LinearLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:gravity="center_vertical"
+                                        android:orientation="horizontal"
+                                        android:paddingTop="8dp">
+                                        <TextView
+                                            android:layout_width="0dp"
+                                            android:layout_height="wrap_content"
+                                            android:layout_weight="1"
+                                            android:text="月"
+                                            android:textAppearance="?attr/textAppearanceBodyLarge" />
+                                        <com.google.android.material.materialswitch.MaterialSwitch
+                                            android:id="@+id/sw_show_month"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content" />
+                                    </LinearLayout>
+                                    <LinearLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:gravity="center_vertical"
+                                        android:orientation="horizontal"
+                                        android:paddingTop="8dp">
+                                        <TextView
+                                            android:layout_width="0dp"
+                                            android:layout_height="wrap_content"
+                                            android:layout_weight="1"
+                                            android:text="周"
+                                            android:textAppearance="?attr/textAppearanceBodyLarge" />
+                                        <com.google.android.material.materialswitch.MaterialSwitch
+                                            android:id="@+id/sw_show_week"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content" />
+                                    </LinearLayout>
+                                </LinearLayout>
+                                <com.google.android.material.textfield.TextInputLayout
+                                    android:id="@+id/til_anniv_message"
+                                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="12dp"
+                                    android:hint="纪念日文案（可选）">
+                                    <com.google.android.material.textfield.TextInputEditText
+                                        android:id="@+id/et_anniv_message"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:hint="纪念日"
+                                        android:inputType="textCapSentences"
+                                        android:maxLines="2"
+                                        android:importantForAutofill="no" />
+                                </com.google.android.material.textfield.TextInputLayout>
+                            </LinearLayout>
+                        </LinearLayout>
+                        <LinearLayout
+                            android:id="@+id/group_repeat"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+                            <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="每月"
-                                android:textAppearance="?attr/textAppearanceBodyLarge" />
-                            <com.google.android.material.radiobutton.MaterialRadioButton
-                                android:id="@+id/rb_repeat_weekly"
+                                android:layout_marginTop="14dp"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="重复周期"
+                                    android:textAppearance="?attr/textAppearanceLabelLarge"
+                                    android:textColor="?attr/colorPrimary" />
+                                <com.google.android.material.materialswitch.MaterialSwitch
+                                    android:id="@+id/sw_repeat"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content" />
+                                </LinearLayout>
+                            <LinearLayout
+                                android:id="@+id/group_repeat_body"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="每周"
-                                android:textAppearance="?attr/textAppearanceBodyLarge" />
-                        </RadioGroup>
+                                android:layout_marginTop="8dp"
+                                android:background="@drawable/bg_panel"
+                                android:orientation="vertical"
+                                android:padding="12dp">
+                                <LinearLayout
+                                    android:id="@+id/seg_repeat"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:background="@drawable/bg_seg_container"
+                                    android:orientation="horizontal"
+                                    android:padding="4dp">
+                        <TextView
+                            android:id="@+id/btn_rep_year"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:paddingTop="12dp"
+                            android:paddingBottom="12dp"
+                            android:text="年"
+                            android:textAppearance="?attr/textAppearanceBodyLarge" />
+                        <TextView
+                            android:id="@+id/btn_rep_month"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:paddingTop="12dp"
+                            android:paddingBottom="12dp"
+                            android:text="月"
+                            android:textAppearance="?attr/textAppearanceBodyLarge" />
+                        <TextView
+                            android:id="@+id/btn_rep_week"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:paddingTop="12dp"
+                            android:paddingBottom="12dp"
+                            android:text="周"
+                            android:textAppearance="?attr/textAppearanceBodyLarge" />
+                        <TextView
+                            android:id="@+id/btn_rep_day"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:paddingTop="12dp"
+                            android:paddingBottom="12dp"
+                            android:text="天"
+                            android:textAppearance="?attr/textAppearanceBodyLarge" />
+                                </LinearLayout>
+                                <com.google.android.material.textfield.TextInputLayout
+                                    android:id="@+id/til_repeat_interval"
+                                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="12dp"
+                                    android:hint="间隔数量"
+                                    app:suffixText="年">
+                                    <com.google.android.material.textfield.TextInputEditText
+                                        android:id="@+id/et_repeat_interval"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:hint="1"
+                                        android:inputType="number"
+                                        android:maxLength="3"
+                                        android:textAppearance="?attr/textAppearanceTitleMedium"
+                                        android:importantForAutofill="no" />
+                                </com.google.android.material.textfield.TextInputLayout>
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="10dp"
+                                    android:text="过期后目标日期自动推进"
+                                    android:textAppearance="?attr/textAppearanceBodySmall"
+                                    android:textColor="?attr/colorOnSurfaceVariant" />
+                            </LinearLayout>
+                        </LinearLayout>
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 

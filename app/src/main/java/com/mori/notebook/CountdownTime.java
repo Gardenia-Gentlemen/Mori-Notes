@@ -364,14 +364,17 @@ public final class CountdownTime {
         }
         long anchor = c.repeatAnchorDate != 0L ? c.repeatAnchorDate : c.date;
         long next = anchor;
+        int step = Math.max(1, c.repeatInterval);
         int guard = 0;
         while (dayDiff(next, todayMillis) > 0 && guard++ < 5000) {
             if (c.repeatType == Countdown.REPEAT_YEARLY) {
-                next = addYears(next, 1);
+                next = addYears(next, step);
             } else if (c.repeatType == Countdown.REPEAT_MONTHLY) {
-                next = addMonths(next, 1);
+                next = addMonths(next, step);
             } else if (c.repeatType == Countdown.REPEAT_WEEKLY) {
-                next = addDays(next, 7);
+                next = addDays(next, (int) (7L * step));
+            } else if (c.repeatType == Countdown.REPEAT_DAILY) {
+                next = addDays(next, step);
             } else {
                 break;
             }

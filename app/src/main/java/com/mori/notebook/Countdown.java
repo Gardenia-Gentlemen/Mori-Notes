@@ -24,6 +24,7 @@ public class Countdown {
     public static final int REPEAT_YEARLY = 1;
     public static final int REPEAT_MONTHLY = 2;
     public static final int REPEAT_WEEKLY = 3;
+    public static final int REPEAT_DAILY = 4;
 
     public String id = "";
     public String title = "";
@@ -42,6 +43,8 @@ public class Countdown {
     public boolean showWeek = false;
 
     public int repeatType = REPEAT_NONE;
+    /** 重复间隔：每 N 个 repeatType 单位推进一次，最小 1。 */
+    public int repeatInterval = 1;
     public long repeatAnchorDate = 0L;
 
     public long createdAt = 0L;
@@ -115,6 +118,7 @@ public class Countdown {
             o.put("showMonth", showMonth);
             o.put("showWeek", showWeek);
             o.put("repeatType", repeatType);
+            o.put("repeatInterval", repeatInterval);
             o.put("repeatAnchorDate", repeatAnchorDate);
             o.put("createdAt", createdAt);
             o.put("bgUri", bgUri == null ? "" : bgUri);
@@ -145,6 +149,7 @@ public class Countdown {
         c.showMonth = o.optBoolean("showMonth", false);
         c.showWeek = o.optBoolean("showWeek", false);
         c.repeatType = o.optInt("repeatType", REPEAT_NONE);
+        c.repeatInterval = Math.max(1, o.optInt("repeatInterval", 1));
         c.repeatAnchorDate = o.optLong("repeatAnchorDate", 0L);
         c.createdAt = o.optLong("createdAt", 0L);
         c.bgUri = o.optString("bgUri", "");

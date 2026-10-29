@@ -28,6 +28,7 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.slider.Slider;
+import com.google.android.material.textfield.TextInputLayout;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -45,15 +46,37 @@ public class CountdownEditActivity extends BaseActivity {
     private TextView tvElapsed;
     private EditText etNote;
     private MaterialSwitch swPinned;
-    private RadioGroup rgMode;
-    private TextView labelAnniv;
-    private TextView labelRepeat;
-    private RadioGroup rgAnniv;
     private View content;
-    private View groupCustomDays;
+    private TextView btnModeDown;
+    private TextView btnModeUp;
+    private View groupAnniv;
+    private MaterialSwitch swAnniv;
+    private View groupAnnivBody;
+    private TextView btnAnnivDays;
+    private TextView btnAnnivCalendar;
+    private View tilCustomDays;
     private EditText etCustomDays;
+    private View groupShowCal;
+    private MaterialSwitch swShowYear;
+    private MaterialSwitch swShowMonth;
+    private MaterialSwitch swShowWeek;
+    private View tilAnnivMessage;
     private EditText etAnnivMessage;
-    private RadioGroup rgRepeat;
+    private View groupRepeat;
+    private MaterialSwitch swRepeat;
+    private View groupRepeatBody;
+    private TextView btnRepYear;
+    private TextView btnRepMonth;
+    private TextView btnRepWeek;
+    private TextView btnRepDay;
+    private TextInputLayout tilRepeatInterval;
+    private EditText etRepeatInterval;
+    /** 当前界面状态：是否累计模式 */
+    private boolean uiUp = false;
+    /** 当前界面状态：纪念日按「纪念天数」还是「预设纪念」 */
+    private boolean uiAnnivDays = true;
+    /** 当前界面状态：重复单位 */
+    private int uiRepeatUnit = Countdown.REPEAT_YEARLY;
     private TextView tvCreated;
     private ImageView ivBgPreview;
     private TextView tvBgHint;
@@ -86,14 +109,30 @@ public class CountdownEditActivity extends BaseActivity {
         tvElapsed = findViewById(R.id.tv_elapsed);
         etNote = findViewById(R.id.et_note);
         swPinned = findViewById(R.id.sw_pinned);
-        rgMode = findViewById(R.id.rg_mode);
-        labelAnniv = findViewById(R.id.label_anniv);
-        labelRepeat = findViewById(R.id.label_repeat);
-        rgAnniv = findViewById(R.id.rg_anniv);
-        groupCustomDays = findViewById(R.id.group_custom_days);
+        btnModeDown = findViewById(R.id.btn_mode_down);
+        btnModeUp = findViewById(R.id.btn_mode_up);
+        groupAnniv = findViewById(R.id.group_anniv);
+        swAnniv = findViewById(R.id.sw_anniv);
+        groupAnnivBody = findViewById(R.id.group_anniv_body);
+        btnAnnivDays = findViewById(R.id.btn_anniv_days);
+        btnAnnivCalendar = findViewById(R.id.btn_anniv_calendar);
+        tilCustomDays = findViewById(R.id.til_custom_days);
+        groupShowCal = findViewById(R.id.group_show_cal);
+        swShowYear = findViewById(R.id.sw_show_year);
+        swShowMonth = findViewById(R.id.sw_show_month);
+        swShowWeek = findViewById(R.id.sw_show_week);
         etCustomDays = findViewById(R.id.et_custom_days);
+        tilAnnivMessage = findViewById(R.id.til_anniv_message);
         etAnnivMessage = findViewById(R.id.et_anniv_message);
-        rgRepeat = findViewById(R.id.rg_repeat);
+        groupRepeat = findViewById(R.id.group_repeat);
+        swRepeat = findViewById(R.id.sw_repeat);
+        groupRepeatBody = findViewById(R.id.group_repeat_body);
+        btnRepYear = findViewById(R.id.btn_rep_year);
+        btnRepMonth = findViewById(R.id.btn_rep_month);
+        btnRepWeek = findViewById(R.id.btn_rep_week);
+        btnRepDay = findViewById(R.id.btn_rep_day);
+        tilRepeatInterval = findViewById(R.id.til_repeat_interval);
+        etRepeatInterval = findViewById(R.id.et_repeat_interval);
         tvCreated = findViewById(R.id.tv_created);
         ivBgPreview = findViewById(R.id.iv_bg_preview);
         tvBgHint = findViewById(R.id.tv_bg_hint);
@@ -128,28 +167,26 @@ public class CountdownEditActivity extends BaseActivity {
         etAnnivMessage.setText(item.annivMessage == null ? "" : item.annivMessage);
         etCustomDays.setInputType(InputType.TYPE_CLASS_NUMBER);
 
-        rgMode.check(Countdown.MODE_UP.equals(item.mode) ? R.id.rb_up : R.id.rb_down);
-        if (item.annivType == Countdown.ANNIV_CUSTOM_DAYS) {
-            rgAnniv.check(R.id.rb_anniv_days);
-        } else if (item.annivType == Countdown.ANNIV_CALENDAR) {
-            rgAnniv.check(R.id.rb_anniv_calendar);
-        } else {
-            rgAnniv.check(R.id.rb_anniv_none);
-        }
-        switch (item.repeatType) {
-            case Countdown.REPEAT_YEARLY:
-                rgRepeat.check(R.id.rb_repeat_yearly);
-                break;
-            case Countdown.REPEAT_MONTHLY:
-                rgRepeat.check(R.id.rb_repeat_monthly);
-                break;
-            case Countdown.REPEAT_WEEKLY:
-                rgRepeat.check(R.id.rb_repeat_weekly);
-                break;
-            default:
-                rgRepeat.check(R.id.rb_repeat_none);
-                break;
-        }
+        uiUp = Countdown.MODE_UP.equals(item.mode);
+        uiAnnivDays = item.annivType != Countdown.ANNIV_CALENDAR;
+        uiRepeatUnit = item.repeatType == Countdown.REPEAT_NONE
+                ? Countdown.REPEAT_YEARLY : item.repeatType;
+        swAnniv.setChecked(item.annivType != Countdown.ANNIV_NONE);
+        swRepeat.setChecked(item.repeatType != Countdown.REPEAT_NONE);
+        swShowYear.setChecked(item.showYear);
+        swShowMonth.setChecked(item.showMonth);
+        swShowWeek.setChecked(item.showWeek);
+        etRepeatInterval.setText(String.valueOf(Math.max(1, item.repeatInterval)));
+        btnModeDown.setOnClickListener(x -> setMode(false));
+        btnModeUp.setOnClickListener(x -> setMode(true));
+        btnAnnivDays.setOnClickListener(x -> setAnnivKind(true));
+        btnAnnivCalendar.setOnClickListener(x -> setAnnivKind(false));
+        btnRepYear.setOnClickListener(x -> setRepeatUnit(Countdown.REPEAT_YEARLY));
+        btnRepMonth.setOnClickListener(x -> setRepeatUnit(Countdown.REPEAT_MONTHLY));
+        btnRepWeek.setOnClickListener(x -> setRepeatUnit(Countdown.REPEAT_WEEKLY));
+        btnRepDay.setOnClickListener(x -> setRepeatUnit(Countdown.REPEAT_DAILY));
+        swAnniv.setOnCheckedChangeListener((b, v) -> syncVisibility());
+        swRepeat.setOnCheckedChangeListener((b, v) -> syncVisibility());
         syncVisibility();
         refreshDateText();
 
@@ -198,8 +235,6 @@ public class CountdownEditActivity extends BaseActivity {
             CardBg.clear();
             refreshBgRow();
         });
-        rgMode.setOnCheckedChangeListener((g, checkedId) -> syncVisibility());
-        rgAnniv.setOnCheckedChangeListener((g, checkedId) -> syncVisibility());
 
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setTitle(isNew ? "新建倒数日" : "编辑倒数日");
@@ -478,16 +513,70 @@ public class CountdownEditActivity extends BaseActivity {
         }
     }
 
+    /** 切换计数方式：累计模式看纪念日，倒数模式看重复。 */
+    private void setMode(boolean up) {
+        uiUp = up;
+        applySegStyles();
+        syncVisibility();
+    }
+
+    /** 切换纪念日形式：纪念天数 / 预设纪念。 */
+    private void setAnnivKind(boolean days) {
+        uiAnnivDays = days;
+        applySegStyles();
+        syncVisibility();
+    }
+
+    /** 切换重复单位，并同步间隔输入框的后缀文案。 */
+    private void setRepeatUnit(int unit) {
+        uiRepeatUnit = unit;
+        applySegStyles();
+        syncIntervalSuffix();
+        syncVisibility();
+    }
+
+    private void syncIntervalSuffix() {
+        String suffix;
+        switch (uiRepeatUnit) {
+            case Countdown.REPEAT_MONTHLY: suffix = "月"; break;
+            case Countdown.REPEAT_WEEKLY: suffix = "周"; break;
+            case Countdown.REPEAT_DAILY: suffix = "天"; break;
+            default: suffix = "年"; break;
+        }
+        tilRepeatInterval.setSuffixText(suffix);
+    }
+
+    /** 把分段控件的选中态绘画出来（背景 + 文字色）。 */
+    private void applySegStyles() {
+        int on = 0xFF1B1B1F, off = 0xFF6B6B70;
+        segStyle(btnModeDown, !uiUp, on, off);
+        segStyle(btnModeUp, uiUp, on, off);
+        segStyle(btnAnnivDays, uiAnnivDays, on, off);
+        segStyle(btnAnnivCalendar, !uiAnnivDays, on, off);
+        segStyle(btnRepYear, uiRepeatUnit == Countdown.REPEAT_YEARLY, on, off);
+        segStyle(btnRepMonth, uiRepeatUnit == Countdown.REPEAT_MONTHLY, on, off);
+        segStyle(btnRepWeek, uiRepeatUnit == Countdown.REPEAT_WEEKLY, on, off);
+        segStyle(btnRepDay, uiRepeatUnit == Countdown.REPEAT_DAILY, on, off);
+    }
+
+    private void segStyle(TextView v, boolean selected, int onColor, int offColor) {
+        if (v == null) return;
+        v.setBackgroundResource(selected ? R.drawable.bg_seg_on : 0);
+        v.setTextColor(selected ? onColor : offColor);
+        v.setTypeface(null, selected ? android.graphics.Typeface.BOLD
+                : android.graphics.Typeface.NORMAL);
+    }
+
     /** 计数方式决定纪念日 / 重复两块的显隐：累计只看纪念日，倒数只看重复。 */
     private void syncVisibility() {
         syncVisibility(content != null && content.isLaidOut());
     }
 
     private void syncVisibility(boolean animate) {
-        boolean up = rgMode.getCheckedRadioButtonId() == R.id.rb_up;
-        boolean annivOn = up && rgAnniv.getCheckedRadioButtonId() != R.id.rb_anniv_none;
-        boolean custom = up && rgAnniv.getCheckedRadioButtonId() == R.id.rb_anniv_days;
-
+        boolean up = uiUp;
+        boolean annivOn = up && swAnniv.isChecked();
+        boolean repeatOn = !up && swRepeat.isChecked();
+        boolean custom = annivOn && uiAnnivDays;
         if (animate && content instanceof ViewGroup) {
             AutoTransition t = new AutoTransition();
             t.setOrdering(TransitionSet.ORDERING_TOGETHER);
@@ -495,12 +584,15 @@ public class CountdownEditActivity extends BaseActivity {
             t.setInterpolator(new DecelerateInterpolator());
             TransitionManager.beginDelayedTransition((ViewGroup) content, t);
         }
-        labelAnniv.setVisibility(up ? View.VISIBLE : View.GONE);
-        rgAnniv.setVisibility(up ? View.VISIBLE : View.GONE);
-        groupCustomDays.setVisibility(custom ? View.VISIBLE : View.GONE);
-        etAnnivMessage.setVisibility(annivOn ? View.VISIBLE : View.GONE);
-        labelRepeat.setVisibility(up ? View.GONE : View.VISIBLE);
-        rgRepeat.setVisibility(up ? View.GONE : View.VISIBLE);
+        groupAnniv.setVisibility(up ? View.VISIBLE : View.GONE);
+        groupAnnivBody.setVisibility(annivOn ? View.VISIBLE : View.GONE);
+        groupRepeat.setVisibility(up ? View.GONE : View.VISIBLE);
+        groupRepeatBody.setVisibility(repeatOn ? View.VISIBLE : View.GONE);
+        tilCustomDays.setVisibility(custom ? View.VISIBLE : View.GONE);
+        groupShowCal.setVisibility(annivOn && !uiAnnivDays ? View.VISIBLE : View.GONE);
+        tilAnnivMessage.setVisibility(annivOn ? View.VISIBLE : View.GONE);
+        syncIntervalSuffix();
+        applySegStyles();
     }
 
     /** 把日切时间与蒙版强度的当前值刷到界面（-1 时从全局取缺省）。 */
@@ -549,34 +641,23 @@ public class CountdownEditActivity extends BaseActivity {
         item.note = etNote.getText().toString().trim();
         item.date = pickedDate;
         item.pinned = swPinned.isChecked();
-        item.mode = rgMode.getCheckedRadioButtonId() == R.id.rb_up ? Countdown.MODE_UP : Countdown.MODE_DOWN;
-
-        int checked = rgAnniv.getCheckedRadioButtonId();
-        if (checked == R.id.rb_anniv_days) {
-            item.annivType = Countdown.ANNIV_CUSTOM_DAYS;
-        } else if (checked == R.id.rb_anniv_calendar) {
-            item.annivType = Countdown.ANNIV_CALENDAR;
-        } else {
+        item.mode = uiUp ? Countdown.MODE_UP : Countdown.MODE_DOWN;
+        if (!uiUp || !swAnniv.isChecked()) {
             item.annivType = Countdown.ANNIV_NONE;
+        } else {
+            item.annivType = uiAnnivDays ? Countdown.ANNIV_CUSTOM_DAYS : Countdown.ANNIV_CALENDAR;
         }
         item.customDays = parseInt(etCustomDays.getText().toString());
         // 不设置纪念日时，卡片不该再出现自定义文案：直接清空，避免残留
         item.annivMessage = item.annivType == Countdown.ANNIV_NONE
                 ? "" : etAnnivMessage.getText().toString().trim();
-        item.showYear = true;
-        item.showMonth = true;
-        item.showWeek = true;
-
-        int rep = rgRepeat.getCheckedRadioButtonId();
-        if (rep == R.id.rb_repeat_yearly) {
-            item.repeatType = Countdown.REPEAT_YEARLY;
-        } else if (rep == R.id.rb_repeat_monthly) {
-            item.repeatType = Countdown.REPEAT_MONTHLY;
-        } else if (rep == R.id.rb_repeat_weekly) {
-            item.repeatType = Countdown.REPEAT_WEEKLY;
-        } else {
-            item.repeatType = Countdown.REPEAT_NONE;
-        }
+        item.showYear = swShowYear.isChecked();
+        item.showMonth = swShowMonth.isChecked();
+        item.showWeek = swShowWeek.isChecked();
+        item.repeatType = (uiUp || !swRepeat.isChecked())
+                ? Countdown.REPEAT_NONE : uiRepeatUnit;
+        int interval = parseInt(etRepeatInterval.getText().toString());
+        item.repeatInterval = interval < 1 ? 1 : interval;
         if (item.repeatType != Countdown.REPEAT_NONE && item.repeatAnchorDate <= 0) {
             item.repeatAnchorDate = pickedDate;
         }
@@ -605,11 +686,17 @@ public class CountdownEditActivity extends BaseActivity {
         b.append(etNote.getText()).append('\u0001');
         b.append(pickedDate).append('\u0001');
         b.append(swPinned.isChecked()).append('\u0001');
-        b.append(rgMode.getCheckedRadioButtonId()).append('\u0001');
-        b.append(rgAnniv.getCheckedRadioButtonId()).append('\u0001');
+        b.append(uiUp).append('\u0001');
+        b.append(uiAnnivDays).append('\u0001');
+        b.append(uiRepeatUnit).append('\u0001');
+        b.append(swAnniv.isChecked()).append('\u0001');
+        b.append(swRepeat.isChecked()).append('\u0001');
+        b.append(swShowYear.isChecked()).append('\u0001');
+        b.append(swShowMonth.isChecked()).append('\u0001');
+        b.append(swShowWeek.isChecked()).append('\u0001');
         b.append(etCustomDays.getText()).append('\u0001');
         b.append(etAnnivMessage.getText()).append('\u0001');
-        b.append(rgRepeat.getCheckedRadioButtonId()).append('\u0001');
+        b.append(etRepeatInterval.getText()).append('\u0001');
         b.append(bgUri == null ? "" : bgUri).append('\u0001');
         b.append(editDayStart).append('\u0001');
         b.append(editCardMask);
