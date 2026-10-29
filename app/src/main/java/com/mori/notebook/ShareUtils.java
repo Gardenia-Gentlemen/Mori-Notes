@@ -386,7 +386,6 @@ public final class ShareUtils {
         row.setBackgroundColor(hasBg ? Color.TRANSPARENT : Color.WHITE);
         int pad = dp(ctx, 20);
         row.setPadding(pad, pad, pad, pad);
-        row.setGravity(android.view.Gravity.BOTTOM);
 
         LinearLayout left = new LinearLayout(ctx);
         left.setOrientation(LinearLayout.VERTICAL);
