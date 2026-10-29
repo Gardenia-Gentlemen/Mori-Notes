@@ -430,7 +430,7 @@ public final class ShareUtils {
         TextView num = new TextView(ctx);
         if (tfB != null) num.setTypeface(tfB);
         num.setText(String.valueOf(abs));
-        num.setTextSize(TypedValue.COMPLEX_UNIT_SP, 34f * fs * 1.5f);
+        num.setTextSize(TypedValue.COMPLEX_UNIT_SP, 34f * fs * 1.3f);
         num.setTextColor(hasBg ? 0xFFFFFFFF : 0xFF1C1B1F);
         LinearLayout.LayoutParams lpNum = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -442,7 +442,7 @@ public final class ShareUtils {
         if (tfR != null) unit.setTypeface(tfR);
         unit.setText(Countdown.MODE_UP.equals(c.mode) ? " 天"
                 : (diff == 0 ? " 就是今天" : (diff > 0 ? " 天后" : " 天前")));
-        unit.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f * fs * 1.5f);
+        unit.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f * fs * 1.3f);
         unit.setTextColor(hasBg ? 0xF2FFFFFF : 0xFF6B6B70);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -452,7 +452,9 @@ public final class ShareUtils {
         row.addView(unit, lp);
 
         int wSpec = View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY);
-        int hSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED);
+        int hSpec = fixedH > 0
+                ? View.MeasureSpec.makeMeasureSpec(fixedH, View.MeasureSpec.EXACTLY)
+                : View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED);
         row.measure(wSpec, hSpec);
         int contentH = Math.max(row.getMeasuredHeight(), 1);
         int h = fixedH > 0 ? Math.max(fixedH, contentH) : contentH;
