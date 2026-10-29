@@ -57,7 +57,7 @@ public class MainActivity extends BaseActivity {
 
         nav.setOnItemSelectedListener(item -> {
             int target = pageOf(item.getItemId());
-            if (pager.getCurrentItem() != target) pager.setCurrentItem(target, false);
+            if (pager.getCurrentItem() != target) pager.setCurrentItem(target, true);
             return true;
         });
         pager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
@@ -162,7 +162,7 @@ public class MainActivity extends BaseActivity {
         if (homeFragment != null && homeFragment.isAdded() && homeFragment.handleBack()) return;
         int startPage = UiPrefs.getStartPage(this);
         if (pager.getCurrentItem() != startPage) {
-            pager.setCurrentItem(startPage, false);
+            pager.setCurrentItem(startPage, true);
             return;
         }
         super.onBackPressed();
