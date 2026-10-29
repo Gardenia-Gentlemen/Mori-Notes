@@ -85,6 +85,9 @@
             android:name=".CountdownTrashActivity"
             android:parentActivityName=".MainActivity" />
         <activity
+            android:name=".CountdownTimelineActivity"
+            android:parentActivityName=".MainActivity" />
+        <activity
             android:name=".CountdownFullScreenActivity"
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:parentActivityName=".MainActivity"

@@ -29,7 +29,7 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
-/** 倒数日页：列表、点开全屏页、长按拖动排序、多选删除与分享 */
+/** 倒数日页：列表、点开时间轴、长按拖动排序、多选删除与分享 */
 public class CountdownFragment extends Fragment {
 
     private CountdownStore store;
@@ -87,7 +87,7 @@ public class CountdownFragment extends Fragment {
                     adapter.toggleSelection(item);
                     refreshTitle();
                 } else {
-                    openFullScreen(item);
+                    openTimeline(item);
                 }
             }
 
@@ -354,6 +354,13 @@ public class CountdownFragment extends Fragment {
 
     private void create() {
         startActivity(new Intent(requireContext(), CountdownEditActivity.class));
+    }
+
+    /** 打开时间轴页（与旧版一致：点卡片进时间轴，页内菜单可进全屏） */
+    private void openTimeline(Countdown item) {
+        Intent i = new Intent(requireContext(), CountdownTimelineActivity.class);
+        i.putExtra("countdown_id", item.id);
+        startActivity(i);
     }
 
     private void openFullScreen(Countdown item) {
