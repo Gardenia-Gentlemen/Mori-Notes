@@ -17,6 +17,13 @@
 - **背景与外观**：多种背景样式，可选用本地图片，全局跟随系统深浅色（MD3）。
 - **页面与入口**：底部导航「主页 | 待办」，左右滑动与点击双向联动，设置页独立入口。
 
+## 兼容性说明
+
+- 不支持导入 [TimeTrace（KIPPU_Trace）](https://github.com/KIPPUDESU/KIPPU_Trace) 导出的 `.zip` 文件。
+- 本应用导出的文件也不支持导入到 [TimeTrace（KIPPU_Trace）](https://github.com/KIPPUDESU/KIPPU_Trace) 中。
+
+> 倒数日页虽参考了 TimeTrace 的设计与交互，但数据格式与备份包结构相互独立，无法互通。
+
 ## 环境
 
 **运行环境**
