@@ -80,6 +80,8 @@ public class TimelineNoteStore {
             if (t.id.equals(n.id)) {
                 t.text = n.text;
                 t.place = n.place;
+                t.timeMs = n.timeMs;
+                t.timeZone = n.timeZone;
                 save();
                 return;
             }

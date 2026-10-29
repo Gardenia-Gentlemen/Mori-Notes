@@ -61,6 +61,17 @@ public class Countdown {
         return deletedAt > 0L;
     }
 
+    /** 累计模式创建后可补录旧回忆的时间窗口：24 小时。 */
+    public static final long BACKFILL_WINDOW_MS = 24L * 3600L * 1000L;
+
+    /** 是否仍处于「可设置/修改回忆时间」的窗口期（累计模式创建后 24 小时内）。 */
+    public boolean canBackfillNoteTime() {
+        if (!MODE_UP.equals(mode)) return false;
+        if (createdAt <= 0L) return false;
+        long used = System.currentTimeMillis() - createdAt;
+        return used >= 0L && used < BACKFILL_WINDOW_MS;
+    }
+
     public Countdown() {
     }
 

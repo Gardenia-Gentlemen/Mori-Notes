@@ -270,7 +270,14 @@ public class CountdownEditActivity extends BaseActivity {
         store.put(item);
         saved = true;
         setResult(RESULT_OK);
-        if (toast) Toast.makeText(this, "已保存", Toast.LENGTH_SHORT).show();
+        if (toast) {
+            if (isNew && Countdown.MODE_UP.equals(item.mode)) {
+                Toast.makeText(this, "已创建累计模式，你有 24 小时时间添加旧回忆",
+                        Toast.LENGTH_LONG).show();
+            } else {
+                Toast.makeText(this, "已保存", Toast.LENGTH_SHORT).show();
+            }
+        }
         return true;
     }
 

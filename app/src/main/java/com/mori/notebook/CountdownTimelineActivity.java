@@ -7,6 +7,8 @@
  */
 package com.mori.notebook;
 
+import android.app.DatePickerDialog;
+import android.app.TimePickerDialog;
 import android.content.Intent;
 import android.graphics.Typeface;
 import android.os.Bundle;
@@ -25,6 +27,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.text.SimpleDateFormat;
 import java.util.Collections;
 import java.util.Date;
@@ -100,15 +103,31 @@ public class CountdownTimelineActivity extends BaseActivity {
         if (!isNew) etPlace.setText(editing.place);
         box.addView(etPlace);
 
-        TimeZone tz = CountdownTime.timeZone();
-        long at = isNew ? System.currentTimeMillis() : editing.timeMs;
-        SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
-        fmt.setTimeZone(tz);
-        TextView tvTime = new TextView(this);
+        // 累计模式创建后 24 小时内：可手动设置/修改回忆时间；超过后新建取当前时刻、旧回忆时间锁定
+        final boolean canBackfill = item.canBackfillNoteTime();
+        final long[] picked = {isNew ? System.currentTimeMillis() : editing.timeMs};
+        final TextView tvTime = new TextView(this);
         tvTime.setTextSize(12);
         tvTime.setPadding(0, dp(8), 0, 0);
-        tvTime.setText((isNew ? "时间：保存时自动取本机当前时间\n" : "时间：创建后固定，修改不会改变\n")
-                + fmt.format(new Date(at)));
+        final Runnable refreshTime = () -> {
+            SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault());
+            fmt.setTimeZone(CountdownTime.timeZone());
+            String val = fmt.format(new Date(picked[0]));
+            if (canBackfill) {
+                tvTime.setText("时间：" + val + "\n（点击可修改，可选过去的日期与时刻；创建 24 小时内可补录旧回忆）");
+            } else if (isNew) {
+                tvTime.setText("时间：保存时自动取本机当前时间\n" + val);
+            } else {
+                tvTime.setText("时间：已超过 24 小时，创建后固定，不可修改\n" + val);
+            }
+        };
+        refreshTime.run();
+        if (canBackfill) {
+            tvTime.setOnClickListener(v -> pickNoteTime(picked[0], ms -> {
+                picked[0] = ms;
+                refreshTime.run();
+            }));
+        }
         box.addView(tvTime);
 
         new MaterialAlertDialogBuilder(this)
@@ -129,17 +148,58 @@ public class CountdownTimelineActivity extends BaseActivity {
                         n.countdownId = item.id;
                         n.text = text;
                         n.place = place;
-                        n.timeMs = System.currentTimeMillis();
+                        n.timeMs = picked[0];
                         n.timeZone = CountdownTime.timeZone().getID();
                         store.add(n);
                     } else {
                         editing.text = text;
                         editing.place = place;
+                        if (canBackfill) {
+                            editing.timeMs = picked[0];
+                            editing.timeZone = CountdownTime.timeZone().getID();
+                        }
                         store.update(editing);
                     }
                     bind(item);
                 })
                 .show();
+    }
+
+    private interface TimePick {
+        void onPicked(long ms);
+    }
+
+    /** 选择回忆时间：先选日期（不晚于今天），再选时分；结果按应用时区合成绝对时刻。 */
+    private void pickNoteTime(long current, TimePick cb) {
+        TimeZone tz = CountdownTime.timeZone();
+        Calendar c = Calendar.getInstance(tz, Locale.CHINA);
+        c.setTimeInMillis(current);
+        int y = c.get(Calendar.YEAR);
+        int m = c.get(Calendar.MONTH) + 1;
+        int d = c.get(Calendar.DAY_OF_MONTH);
+        Calendar now = Calendar.getInstance(tz, Locale.CHINA);
+        long maxUtc = CountdownTime.millisOf(now.get(Calendar.YEAR),
+                now.get(Calendar.MONTH) + 1, now.get(Calendar.DAY_OF_MONTH));
+        DatePickerDialog dp = new DatePickerDialog(this,
+                (view, yy, mm, dd) -> pickNoteHourMinute(yy, mm, dd, current, cb), y, m - 1, d);
+        dp.getDatePicker().setMaxDate(maxUtc);
+        dp.show();
+    }
+
+    private void pickNoteHourMinute(int y, int m, int d, long current, TimePick cb) {
+        TimeZone tz = CountdownTime.timeZone();
+        Calendar c = Calendar.getInstance(tz, Locale.CHINA);
+        c.setTimeInMillis(current);
+        TimePickerDialog tp = new TimePickerDialog(this, (view, h, mn) -> {
+            Calendar cal = Calendar.getInstance(tz, Locale.CHINA);
+            cal.clear();
+            cal.set(y, m - 1, d, h, mn, 0);
+            long v = cal.getTimeInMillis();
+            long nowMs = System.currentTimeMillis();
+            if (v > nowMs) v = nowMs;
+            cb.onPicked(v);
+        }, c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE), true);
+        tp.show();
     }
 
     private void showAddDialog() {
