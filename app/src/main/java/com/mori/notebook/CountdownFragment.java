@@ -450,30 +450,25 @@ public class CountdownFragment extends Fragment {
         applyToolbar();
     }
 
-    /** 编辑该条倒数日的字体：跟随系统默认、从字体库选、或导入新字体。 */
+    /** 选择该条倒数日的字体：跟随系统默认、从字体库选（选项以字体预览展示）、或导入新字体。 */
     private void showFontMenu(final Countdown item) {
-        final java.util.List<java.io.File> fonts = FontImporter.list(requireContext());
-        final String[] labels = new String[fonts.size() + 2];
-        labels[0] = "跟随默认字体";
-        for (int i = 0; i < fonts.size(); i++) {
-            labels[i + 1] = FontImporter.displayName(fonts.get(i));
-        }
-        labels[labels.length - 1] = "导入新字体…";
-        new MaterialAlertDialogBuilder(requireContext())
-                .setTitle("编辑字体")
-                .setItems(labels, (d, which) -> {
-                    if (which == labels.length - 1) {
+        FontChooser.show(requireContext(), FontImporter.list(requireContext()), item.fontPath, item.title,
+                new FontChooser.Callback() {
+                    @Override
+                    public void onPick(String fontPath) {
+                        item.fontPath = fontPath;
+                        store.put(item);
+                        store.reload();
+                        reload();
+                        toast(fontPath.isEmpty() ? "已恢复默认字体" : "字体已更新");
+                    }
+
+                    @Override
+                    public void onImport() {
                         pendingFontItem = item;
                         pickFont();
-                        return;
                     }
-                    item.fontPath = which == 0 ? "" : fonts.get(which - 1).getAbsolutePath();
-                    store.put(item);
-                    store.reload();
-                    reload();
-                    toast(which == 0 ? "已恢复默认字体" : "字体已更新");
-                })
-                .show();
+                });
     }
     /** 选择本地字体文件（ttf / otf / ttc）并导入，列表卡片立即刷新。 */
     private void pickFont() {

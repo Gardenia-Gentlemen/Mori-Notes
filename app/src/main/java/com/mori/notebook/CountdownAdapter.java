@@ -43,7 +43,7 @@ public class CountdownAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
         /** 三点菜单中的「编辑」 */
         void onEdit(Countdown item);
 
-        /** 三点菜单中的「编辑字体」 */
+        /** 三点菜单中的「选择字体」 */
         void onImportFont(Countdown item);
 
         /** 多选态下选中项数量变化 */
@@ -225,12 +225,12 @@ public class CountdownAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
         applySelectionStyle(h, sel);
     }
 
-    /** 右侧三点菜单：编辑、编辑字体 */
+    /** 右侧三点菜单：编辑、选择字体 */
     private void showMenu(View anchor, final Countdown c) {
         PopupMenu pm = new PopupMenu(anchor.getContext(), anchor);
         pm.getMenu().add(0, 3, 0, "分享图片");
         pm.getMenu().add(0, 1, 1, "编辑");
-        pm.getMenu().add(0, 2, 2, "编辑字体");
+        pm.getMenu().add(0, 2, 2, "选择字体");
         pm.setOnMenuItemClickListener(item -> {
             if (item.getItemId() == 1) {
                 listener.onEdit(c);

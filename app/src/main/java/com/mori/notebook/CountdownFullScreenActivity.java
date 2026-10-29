@@ -576,27 +576,23 @@ public class CountdownFullScreenActivity extends BaseActivity {
         toast("字体已应用");
     }
 
-    /** 从字体库里为当前这条倒数日选择字体。 */
+    /** 从字体库里为当前这条倒数日选择字体（选项以字体预览展示）。 */
     private void chooseFont() {
-        final java.util.List<File> fonts = FontImporter.list(this);
-        if (fonts.isEmpty()) {
-            toast("字体库为空，请先导入字体");
-            return;
-        }
-        String[] labels = new String[fonts.size() + 1];
-        labels[0] = "跟随默认字体";
-        for (int i = 0; i < fonts.size(); i++) {
-            labels[i + 1] = FontImporter.displayName(fonts.get(i));
-        }
-        new MaterialAlertDialogBuilder(this)
-                .setTitle("选择字体")
-                .setItems(labels, (d, which) -> {
-                    item.fontPath = which == 0 ? "" : fonts.get(which - 1).getAbsolutePath();
-                    CountdownStore.get(this).put(item);
-                    applyTypeface();
-                    toast("字体已更新");
-                })
-                .show();
+        FontChooser.show(this, FontImporter.list(this), item.fontPath, item.title,
+                new FontChooser.Callback() {
+                    @Override
+                    public void onPick(String fontPath) {
+                        item.fontPath = fontPath;
+                        CountdownStore.get(CountdownFullScreenActivity.this).put(item);
+                        applyTypeface();
+                        toast(fontPath.isEmpty() ? "已恢复默认字体" : "字体已更新");
+                    }
+
+                    @Override
+                    public void onImport() {
+                        pickFont();
+                    }
+                });
     }
 
     /** 读取已保存字体，失效时静默回退系统字体。 */
