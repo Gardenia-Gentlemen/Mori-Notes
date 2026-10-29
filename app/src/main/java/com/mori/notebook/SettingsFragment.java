@@ -25,8 +25,6 @@ public class SettingsFragment extends Fragment {
 
     private TextView tvBgName;
     private TextView tvPrivacyState;
-
-    private ActivityResultLauncher<String[]> cardBgLauncher;
     private ActivityResultLauncher<Intent> deviceLauncher;
     private ActivityResultLauncher<Intent> authLauncher;
     private ActivityResultLauncher<String[]> importLauncher;
@@ -58,23 +56,6 @@ public class SettingsFragment extends Fragment {
                     if (uri != null) doImportMori(uri);
                 });
 
-        cardBgLauncher = registerForActivityResult(
-                new ActivityResultContracts.OpenDocument(), uri -> {
-                    if (uri == null) {
-                        return;
-                    }
-                    try {
-                        requireContext().getContentResolver().takePersistableUriPermission(uri,
-                                Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                    } catch (Exception ignored) {
-                    }
-                    CountdownPrefs.setCardBg(requireContext(), uri);
-                    CardBg.clear();
-                    if (getView() != null) {
-                        bindCountdownCard(getView());
-                    }
-                    toast("已设置卡片背景图");
-                });
         exportLauncher = registerForActivityResult(
                 new ActivityResultContracts.CreateDocument("application/octet-stream"),
                 uri -> {
@@ -115,7 +96,6 @@ public class SettingsFragment extends Fragment {
     public void onViewCreated(@NonNull View v, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(v, savedInstanceState);
 
-        bindCountdownCard(v);
         bindTimeZoneCard(v);
         RadioGroup rgStart = v.findViewById(R.id.rg_start_page);
         int sp = UiPrefs.getStartPage(requireContext());
@@ -585,25 +565,6 @@ public class SettingsFragment extends Fragment {
 
     private String percent(float v) {
         return Math.round(v * 100) + "%";
-    }
-
-    /** 倒数日卡片设置：全局背景图（日切与蒙版已下放到单条倒数日）。 */
-    private void bindCountdownCard(View v) {
-        MaterialButton bg = v.findViewById(R.id.btn_card_bg);
-        MaterialButton clear = v.findViewById(R.id.btn_card_bg_clear);
-        if (bg == null || clear == null) {
-            return;
-        }
-        Uri cur = CountdownPrefs.getCardBg(requireContext());
-        bg.setText(cur == null ? "卡片背景图：未设置" : "卡片背景图：已设置（点击更换）");
-        bg.setOnClickListener(x -> cardBgLauncher.launch(new String[]{"image/*"}));
-        clear.setVisibility(cur == null ? View.GONE : View.VISIBLE);
-        clear.setOnClickListener(x -> {
-            CountdownPrefs.setCardBg(requireContext(), null);
-            CardBg.clear();
-            bindCountdownCard(v);
-            toast("已清除背景图");
-        });
     }
 
     /** 时区卡片：影响所有倒数日的时间换算。 */
