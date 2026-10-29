@@ -318,7 +318,9 @@ public final class CountdownTime {
         if (days <= 0) {
             return null;
         }
-        if (c.annivMessage != null && !c.annivMessage.trim().isEmpty()) {
+        // 自定义文案只在真正命中纪念日那天出现，其余日子不该占着卡片位置
+        if (c.annivMessage != null && !c.annivMessage.trim().isEmpty()
+                && isAnnivHit(c, todayMillis)) {
             return c.annivMessage.trim();
         }
         if (c.annivType == Countdown.ANNIV_CUSTOM_DAYS) {

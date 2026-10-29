@@ -11,6 +11,8 @@ import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.text.InputType;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.RadioGroup;
@@ -18,6 +20,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.transition.AutoTransition;
+import androidx.transition.TransitionManager;
+import androidx.transition.TransitionSet;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -40,6 +45,7 @@ public class CountdownEditActivity extends BaseActivity {
     private TextView labelAnniv;
     private TextView labelRepeat;
     private RadioGroup rgAnniv;
+    private View content;
     private View groupCustomDays;
     private EditText etCustomDays;
     private EditText etAnnivMessage;
@@ -62,6 +68,7 @@ public class CountdownEditActivity extends BaseActivity {
         isNew = item == null;
         if (isNew) item = new Countdown();
 
+        content = findViewById(R.id.content);
         etTitle = findViewById(R.id.et_title);
         tvDate = findViewById(R.id.tv_date);
         etNote = findViewById(R.id.et_note);
@@ -120,7 +127,10 @@ public class CountdownEditActivity extends BaseActivity {
             tvCreated.setVisibility(View.VISIBLE);
         }
 
-        findViewById(R.id.row_date).setOnClickListener(v -> pickDate());
+        findViewById(R.id.row_date).setOnClickListener(v -> {
+            press(v);
+            pickDate();
+        });
         bgPicker = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(), r -> {
                     android.content.Intent data = r.getData();
@@ -139,6 +149,7 @@ public class CountdownEditActivity extends BaseActivity {
         refreshBgRow();
         findViewById(R.id.row_bg).setOnClickListener(v -> {
             if (bgPicker == null) return;
+            press(v);
             try {
                 bgPicker.launch(Gallery.intent());
             } catch (Exception e) {
@@ -173,6 +184,26 @@ public class CountdownEditActivity extends BaseActivity {
         });
         initialSnapshot = snapshot();
         if (isNew) etTitle.requestFocus();
+
+        // 进场：整页内容淡入上浮，标题先到、其余稍后，避免生硬弹出
+        content.setAlpha(0f);
+        content.setTranslationY(dp(14));
+        content.animate().alpha(1f).translationY(0f)
+                .setDuration(260)
+                .setInterpolator(new DecelerateInterpolator())
+                .start();
+    }
+
+    private float dp(float v) {
+        return v * getResources().getDisplayMetrics().density;
+    }
+
+    /** 轻按反馈：按下微缩后回弹。 */
+    private void press(View v) {
+        if (v == null) return;
+        v.animate().scaleX(0.985f).scaleY(0.985f).setDuration(70).start();
+        v.postDelayed(() -> v.animate().scaleX(1f).scaleY(1f).setDuration(140)
+                .setInterpolator(new DecelerateInterpolator()).start(), 80);
     }
 
     private void pickDate() {
@@ -198,6 +229,14 @@ public class CountdownEditActivity extends BaseActivity {
         String lunar = LunarUtil.format(pickedDate);
         tvDate.setText(CountdownTime.formatDate(pickedDate)
                 + (lunar.isEmpty() ? "" : " · " + lunar) + " · " + tail);
+        if (tvDate.isLaidOut()) {
+            tvDate.setAlpha(0f);
+            tvDate.setTranslationY(dp(6));
+            tvDate.animate().alpha(1f).translationY(0f)
+                    .setDuration(180)
+                    .setInterpolator(new DecelerateInterpolator())
+                    .start();
+        }
     }
 
     /** 刷新背景行：有图显示缩略图与移除，无图提示选择。 */
@@ -220,12 +259,25 @@ public class CountdownEditActivity extends BaseActivity {
 
     /** 计数方式决定纪念日 / 重复两块的显隐：累计只看纪念日，倒数只看重复。 */
     private void syncVisibility() {
+        syncVisibility(content != null && content.isLaidOut());
+    }
+
+    private void syncVisibility(boolean animate) {
         boolean up = rgMode.getCheckedRadioButtonId() == R.id.rb_up;
+        boolean annivOn = up && rgAnniv.getCheckedRadioButtonId() != R.id.rb_anniv_none;
+        boolean custom = up && rgAnniv.getCheckedRadioButtonId() == R.id.rb_anniv_days;
+
+        if (animate && content instanceof ViewGroup) {
+            AutoTransition t = new AutoTransition();
+            t.setOrdering(TransitionSet.ORDERING_TOGETHER);
+            t.setDuration(220);
+            t.setInterpolator(new DecelerateInterpolator());
+            TransitionManager.beginDelayedTransition((ViewGroup) content, t);
+        }
         labelAnniv.setVisibility(up ? View.VISIBLE : View.GONE);
         rgAnniv.setVisibility(up ? View.VISIBLE : View.GONE);
-        boolean custom = up && rgAnniv.getCheckedRadioButtonId() == R.id.rb_anniv_days;
         groupCustomDays.setVisibility(custom ? View.VISIBLE : View.GONE);
-        etAnnivMessage.setVisibility(up ? View.VISIBLE : View.GONE);
+        etAnnivMessage.setVisibility(annivOn ? View.VISIBLE : View.GONE);
         labelRepeat.setVisibility(up ? View.GONE : View.VISIBLE);
         rgRepeat.setVisibility(up ? View.GONE : View.VISIBLE);
     }
@@ -260,7 +312,9 @@ public class CountdownEditActivity extends BaseActivity {
             item.annivType = Countdown.ANNIV_NONE;
         }
         item.customDays = parseInt(etCustomDays.getText().toString());
-        item.annivMessage = etAnnivMessage.getText().toString().trim();
+        // 不设置纪念日时，卡片不该再出现自定义文案：直接清空，避免残留
+        item.annivMessage = item.annivType == Countdown.ANNIV_NONE
+                ? "" : etAnnivMessage.getText().toString().trim();
         item.showYear = true;
         item.showMonth = true;
         item.showWeek = true;

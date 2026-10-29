@@ -27,6 +27,7 @@
             android:fillViewport="true">
 
             <LinearLayout
+                android:id="@+id/content"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
@@ -207,6 +208,7 @@
                     android:id="@+id/et_anniv_message"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
                     android:hint="自定义文案（可选，留空自动生成）"
                     android:inputType="textCapSentences"
                     android:maxLines="2"
