@@ -74,14 +74,13 @@ public class MainActivity extends BaseActivity {
         updateToolbar(PAGE_HOME);
         deliverOpenIntent(getIntent());
     }
-    /** 底栏底色/图标色取当前主题色，切深色模式后同步。 */
+    /** 底栏透明，图标/文字取当前主题色，切深色模式后同步。 */
     private void applyNavTheme() {
         if (nav == null) return;
         int primary = themeColor(com.google.android.material.R.attr.colorPrimary, 0xFF6750A4);
-        int onPrimary = themeColor(com.google.android.material.R.attr.colorOnPrimary, 0xFFFFFFFF);
-        nav.setBackgroundColor(primary);
-        nav.setItemIconTintList(android.content.res.ColorStateList.valueOf(onPrimary));
-        nav.setItemTextColor(android.content.res.ColorStateList.valueOf(onPrimary));
+        nav.setBackgroundColor(android.graphics.Color.TRANSPARENT);
+        nav.setItemIconTintList(android.content.res.ColorStateList.valueOf(primary));
+        nav.setItemTextColor(android.content.res.ColorStateList.valueOf(primary));
     }
 
     /** 底栏菜单项 → 页面序号 */

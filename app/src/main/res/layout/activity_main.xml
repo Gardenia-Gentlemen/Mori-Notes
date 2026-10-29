@@ -24,11 +24,12 @@
             android:id="@+id/bottom_nav"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:backgroundTint="?attr/colorPrimary"
+            android:background="@android:color/transparent"
+            app:backgroundTint="@android:color/transparent"
             app:elevation="0dp"
             app:itemActiveIndicatorStyle="@style/Widget.Notebook.NavIndicator"
-            app:itemIconTint="?attr/colorOnPrimary"
-            app:itemTextColor="?attr/colorOnPrimary"
+            app:itemIconTint="?attr/colorPrimary"
+            app:itemTextColor="?attr/colorPrimary"
             app:menu="@menu/menu_bottom" />
     </LinearLayout>
 </FrameLayout>

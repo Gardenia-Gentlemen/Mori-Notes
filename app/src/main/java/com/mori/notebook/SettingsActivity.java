@@ -13,11 +13,10 @@ public class SettingsActivity extends BaseActivity {
         setContentView(R.layout.activity_settings);
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setTitle(R.string.settings);
-        int primary = themeColor(com.google.android.material.R.attr.colorPrimary, 0xFF6750A4);
-        int onPrimary = themeColor(com.google.android.material.R.attr.colorOnPrimary, 0xFFFFFFFF);
-        toolbar.setBackgroundColor(primary);
-        toolbar.setTitleTextColor(onPrimary);
-        toolbar.setNavigationIconTint(onPrimary);
+        int onSurface = themeColor(com.google.android.material.R.attr.colorOnSurface, 0xFF1D1B20);
+        toolbar.setBackgroundColor(android.graphics.Color.TRANSPARENT);
+        toolbar.setTitleTextColor(onSurface);
+        toolbar.setNavigationIconTint(onSurface);
         toolbar.setNavigationOnClickListener(v -> finish());
         if (savedInstanceState == null) {
             getSupportFragmentManager().beginTransaction()

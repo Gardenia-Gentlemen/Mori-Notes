@@ -11,5 +11,5 @@
     <color name="md_on_surface">#E6E0E9</color>
     <color name="md_on_surface_variant">#CAC4D0</color>
     <color name="md_outline">#938F99</color>
-    <color name="nav_indicator">#33000000</color>
+    <color name="nav_indicator">#33D0BCFF</color>
 </resources>

@@ -11,6 +11,6 @@
     <color name="md_on_surface">#1D1B20</color>
     <color name="md_on_surface_variant">#49454F</color>
     <color name="md_outline">#79747E</color>
-    <color name="nav_indicator">#33FFFFFF</color>
+    <color name="nav_indicator">#336750A4</color>
     <color name="ic_launcher_background">#6750A4</color>
 </resources>
