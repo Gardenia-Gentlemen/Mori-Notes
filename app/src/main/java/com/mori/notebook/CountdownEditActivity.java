@@ -661,6 +661,7 @@ public class CountdownEditActivity extends BaseActivity {
         if (v == null) return;
         v.setBackgroundResource(R.drawable.bg_seg_ripple);
         v.setTextColor(selected ? onColor : offColor);
+        v.setCompoundDrawableTintList(android.content.res.ColorStateList.valueOf(selected ? onColor : offColor));
         v.setTypeface(null, selected ? android.graphics.Typeface.BOLD
                 : android.graphics.Typeface.NORMAL);
     }

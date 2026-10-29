@@ -306,30 +306,40 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:orientation="horizontal">
-                        <TextView
-                            android:id="@+id/btn_mode_down"
+                        <FrameLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:drawableStart="@drawable/ic_mode_down"
-                            android:drawablePadding="8dp"
-                            android:gravity="center"
-                            android:paddingTop="12dp"
-                            android:paddingBottom="12dp"
-                            android:text="倒数模式"
-                            android:textAppearance="?attr/textAppearanceBodyLarge" />
-                        <TextView
-                            android:id="@+id/btn_mode_up"
+                            android:layout_weight="1">
+                            <TextView
+                                android:id="@+id/btn_mode_down"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center"
+                                android:drawableStart="@drawable/ic_mode_down"
+                                android:drawablePadding="8dp"
+                                android:gravity="center"
+                                android:paddingTop="12dp"
+                                android:paddingBottom="12dp"
+                                android:text="倒数模式"
+                                android:textAppearance="?attr/textAppearanceBodyLarge" />
+                        </FrameLayout>
+                        <FrameLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:drawableStart="@drawable/ic_mode_up"
-                            android:drawablePadding="8dp"
-                            android:gravity="center"
-                            android:paddingTop="12dp"
-                            android:paddingBottom="12dp"
-                            android:text="累计模式"
-                            android:textAppearance="?attr/textAppearanceBodyLarge" />
+                            android:layout_weight="1">
+                            <TextView
+                                android:id="@+id/btn_mode_up"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center"
+                                android:drawableStart="@drawable/ic_mode_up"
+                                android:drawablePadding="8dp"
+                                android:gravity="center"
+                                android:paddingTop="12dp"
+                                android:paddingBottom="12dp"
+                                android:text="累计模式"
+                                android:textAppearance="?attr/textAppearanceBodyLarge" />
+                        </FrameLayout>
                             </LinearLayout>
                         </FrameLayout>
                         <LinearLayout
