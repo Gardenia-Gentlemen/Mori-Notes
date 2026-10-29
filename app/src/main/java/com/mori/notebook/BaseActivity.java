@@ -17,6 +17,7 @@ public class BaseActivity extends AppCompatActivity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        applyCutoutMode();
         imagePicker = registerForActivityResult(new ActivityResultContracts.OpenDocument(), uri -> {
             if (uri != null) {
                 try {
@@ -29,6 +30,26 @@ public class BaseActivity extends AppCompatActivity {
                 applyBackground();
             }
         });
+    }
+
+    /** 让窗口延伸到刘海/挖孔区域，背景铺满，横屏不再出现黑边。 */
+    private void applyCutoutMode() {
+        try {
+            android.view.Window w = getWindow();
+            android.view.WindowManager.LayoutParams lp = w.getAttributes();
+            if (android.os.Build.VERSION.SDK_INT >= 30) {
+                lp.layoutInDisplayCutoutMode =
+                        android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
+            } else if (android.os.Build.VERSION.SDK_INT >= 28) {
+                lp.layoutInDisplayCutoutMode =
+                        android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+            }
+            w.setAttributes(lp);
+            w.addFlags(android.view.WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+            w.setStatusBarColor(android.graphics.Color.TRANSPARENT);
+            w.setNavigationBarColor(android.graphics.Color.TRANSPARENT);
+        } catch (Exception ignored) {
+        }
     }
 
     /** 读当前主题色，随深/浅色主题自动变化。 */
