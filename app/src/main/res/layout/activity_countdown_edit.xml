@@ -403,21 +403,13 @@
                             android:textAppearance="?attr/textAppearanceBodyLarge" />
                                     </LinearLayout>
                                 </FrameLayout>
-                                <LinearLayout
+                                <FrameLayout
                                     android:id="@+id/til_custom_days"
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
                                     android:layout_marginTop="12dp"
-                                    android:orientation="vertical">
-                                    <TextView
-                                        android:layout_width="match_parent"
-                                        android:layout_height="wrap_content"
-                                        android:paddingStart="4dp"
-                                        android:paddingEnd="4dp"
-                                        android:paddingBottom="6dp"
-                                        android:text="自定义周期（N 天）"
-                                        android:textAppearance="?attr/textAppearanceLabelMedium"
-                                        android:textColor="?attr/colorOnSurfaceVariant" />
+                                    android:clipChildren="false"
+                                    android:clipToPadding="false">
                                     <com.google.android.material.textfield.TextInputLayout
                                         style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                                         android:layout_width="match_parent"
@@ -433,7 +425,19 @@
                                             android:textAppearance="?attr/textAppearanceTitleMedium"
                                             android:importantForAutofill="no" />
                                     </com.google.android.material.textfield.TextInputLayout>
-                                </LinearLayout>
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_gravity="top|start"
+                                        android:layout_marginStart="16dp"
+                                        android:background="?attr/colorSurfaceContainerHigh"
+                                        android:paddingStart="4dp"
+                                        android:paddingEnd="4dp"
+                                        android:text="自定义周期（N 天）"
+                                        android:textAppearance="?attr/textAppearanceLabelSmall"
+                                        android:textColor="?attr/colorOnSurfaceVariant"
+                                        android:translationY="-7dp" />
+                                </FrameLayout>
                                 <LinearLayout
                                     android:id="@+id/group_show_cal"
                                     android:layout_width="match_parent"
@@ -491,21 +495,13 @@
                                             android:layout_height="wrap_content" />
                                     </LinearLayout>
                                 </LinearLayout>
-                                <LinearLayout
+                                <FrameLayout
                                     android:id="@+id/til_anniv_message"
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
                                     android:layout_marginTop="12dp"
-                                    android:orientation="vertical">
-                                    <TextView
-                                        android:layout_width="match_parent"
-                                        android:layout_height="wrap_content"
-                                        android:paddingStart="4dp"
-                                        android:paddingEnd="4dp"
-                                        android:paddingBottom="6dp"
-                                        android:text="纪念日文案（可选）"
-                                        android:textAppearance="?attr/textAppearanceLabelMedium"
-                                        android:textColor="?attr/colorOnSurfaceVariant" />
+                                    android:clipChildren="false"
+                                    android:clipToPadding="false">
                                     <com.google.android.material.textfield.TextInputLayout
                                         style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                                         android:layout_width="match_parent"
@@ -520,7 +516,19 @@
                                             android:maxLines="2"
                                             android:importantForAutofill="no" />
                                     </com.google.android.material.textfield.TextInputLayout>
-                                </LinearLayout>
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_gravity="top|start"
+                                        android:layout_marginStart="16dp"
+                                        android:background="?attr/colorSurfaceContainerHigh"
+                                        android:paddingStart="4dp"
+                                        android:paddingEnd="4dp"
+                                        android:text="纪念日文案（可选）"
+                                        android:textAppearance="?attr/textAppearanceLabelSmall"
+                                        android:textColor="?attr/colorOnSurfaceVariant"
+                                        android:translationY="-7dp" />
+                                </FrameLayout>
                             </LinearLayout>
                         </LinearLayout>
                         <LinearLayout
