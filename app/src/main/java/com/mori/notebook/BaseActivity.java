@@ -18,11 +18,56 @@ public class BaseActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         applyCutoutMode();
     }
+    /** 待淡入标记：重建后新实例首帧从透明渐显。 */
+    private static boolean sPendingFadeIn = false;
+
+    /** 重建当前页面（时区等场景），带淡出/淡入过渡。 */
+    protected void recreateWithFade() {
+        switchWithFade(null);
+    }
+
+    /** 先淡出根布局，再执行 beforeRecreate 并重建；新实例首帧淡入。 */
+    protected void switchWithFade(@Nullable Runnable beforeRecreate) {
+        sPendingFadeIn = true;
+        final android.view.View root = findViewById(R.id.root);
+        if (root == null) {
+            if (beforeRecreate != null) beforeRecreate.run();
+            recreate();
+            return;
+        }
+        root.animate().cancel();
+        root.animate()
+                .alpha(0f)
+                .setDuration(130)
+                .setInterpolator(new android.view.animation.AccelerateInterpolator())
+                .withEndAction(() -> {
+                    if (beforeRecreate != null) beforeRecreate.run();
+                    // 主题切换可能已由 AppCompatDelegate 触发重建，避免重复 recreate
+                    if (!isFinishing() && !isDestroyed()) recreate();
+                })
+                .start();
+    }
+
     /** 内容布局就绪后统一处理 edge-to-edge 内边距（Android 15+ 强制生效）。 */
     @Override
     public void onContentChanged() {
         super.onContentChanged();
         applyDefaultInsets();
+        applyFadeInIfNeeded();
+    }
+
+    /** 主题切换重建后的首帧淡入。 */
+    private void applyFadeInIfNeeded() {
+        if (!sPendingFadeIn) return;
+        sPendingFadeIn = false;
+        final android.view.View root = findViewById(R.id.root);
+        if (root == null) return;
+        root.setAlpha(0f);
+        root.post(() -> root.animate()
+                .alpha(1f)
+                .setDuration(230)
+                .setInterpolator(new android.view.animation.DecelerateInterpolator())
+                .start());
     }
 
     /** 全屏页面可覆盖关闭默认内边距处理。 */

@@ -116,8 +116,13 @@ public class SettingsFragment extends Fragment {
             int m = checkedId == R.id.radio_light ? 1 : checkedId == R.id.radio_dark ? 2 : 0;
             if (m == UiPrefs.getThemeMode(requireContext())) return;
             UiPrefs.setThemeMode(requireContext(), m);
-            NotebookApp.applyTheme(requireContext());
-            requireActivity().recreate();
+            if (requireActivity() instanceof BaseActivity) {
+                ((BaseActivity) requireActivity())
+                        .switchWithFade(() -> NotebookApp.applyTheme(requireContext()));
+            } else {
+                NotebookApp.applyTheme(requireContext());
+                requireActivity().recreate();
+            }
         });
 
         tvBgName = v.findViewById(R.id.tv_bg_name);

@@ -217,7 +217,7 @@ public class MainActivity extends BaseActivity {
                     tzDialogShown = false;
                     CountdownPrefs.setTimeZoneId(this, sys);
                     CountdownPrefs.setSeenSystemTimeZone(this, sys);
-                    recreate();
+                    recreateWithFade();
                 })
                 .show();
     }
