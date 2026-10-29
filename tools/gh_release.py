@@ -85,11 +85,15 @@ else:
     print('RELEASE_URL', rel['html_url'])
 
 upload = rel['upload_url'].split('{')[0]
-existing = {a['name'] for a in rel.get('assets', [])}
+existing = {a['name']: a for a in rel.get('assets', [])}
+clobber = '--clobber' in sys.argv
 for path, name, ctype in [(apk, 'mori_notes-%s.apk' % tag, 'application/vnd.android.package-archive'),
                           (src, 'mori_notes-%s-src.zip' % tag, 'application/zip')]:
     if name in existing:
-        print('SKIP_EXISTS', name); continue
+        if not clobber:
+            print('SKIP_EXISTS', name); continue
+        s0, t0 = api('https://api.github.com/repos/%s/releases/assets/%s' % (REPO, existing[name]['id']), method='DELETE')
+        print('DELETE_ASSET', name, s0)
     data = open(path, 'rb').read()
     url = upload + '?name=' + urllib.parse.quote(name)
     s2, t2 = api(url, raw=data, method='POST', ctype=ctype)
