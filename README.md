@@ -1,6 +1,6 @@
 （# Mori Notes
 
-一个只给自己用的 Android 笔记应用。纯 Java + Material Design 3，无第三方服务，不联网，数据完全在本地。
+一个AI生成的 Android 笔记应用。纯 Java + Material Design 3，无第三方服务，不联网，数据完全在本地。
 
 ## 功能
 
@@ -57,7 +57,7 @@ gradle assembleRelease
 
 ## 说明
 
-个人使用，不发布到应用商店，不提供 Issues 支持。
+不发布到应用商店，不提供 Issues 支持，不建议在2.0版本前下载。
 
 每个版本目录包含：`*.apk`（该版正式包）与 `src/`（该版源码）
 
