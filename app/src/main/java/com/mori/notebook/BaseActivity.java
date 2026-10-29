@@ -93,5 +93,21 @@ public class BaseActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         applyBackground();
+        applyTopBar();
+    }
+
+    /** 顶栏统一透明，文字/返回箭头跟随主题前景色。 */
+    protected void applyTopBar() {
+        try {
+            android.view.View v = findViewById(R.id.toolbar);
+            if (!(v instanceof com.google.android.material.appbar.MaterialToolbar)) return;
+            com.google.android.material.appbar.MaterialToolbar tb =
+                    (com.google.android.material.appbar.MaterialToolbar) v;
+            tb.setBackgroundColor(android.graphics.Color.TRANSPARENT);
+            int onSurface = themeColor(com.google.android.material.R.attr.colorOnSurface, 0xFF1C1B1F);
+            tb.setTitleTextColor(onSurface);
+            if (tb.getNavigationIcon() != null) tb.setNavigationIconTint(onSurface);
+        } catch (Exception ignored) {
+        }
     }
 }
