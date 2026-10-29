@@ -17,6 +17,8 @@ public class NotebookApp extends Application {
         if (CountdownPrefs.getSeenSystemTimeZone(this).isEmpty()) {
             CountdownPrefs.setSeenSystemTimeZone(this, java.util.TimeZone.getDefault().getID());
         }
+        // 内置字体：首次启动/升级后首次启动把 assets/fonts 的字体解到字体库
+        BuiltinFonts.ensure(this);
     }
 
     public static void applyTheme(Context c) {
