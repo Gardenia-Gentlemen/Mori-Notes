@@ -39,6 +39,8 @@ public class CountdownEditActivity extends BaseActivity {
     private long pickedDate;
     private EditText etTitle;
     private TextView tvDate;
+    private TextView tvLunar;
+    private TextView tvElapsed;
     private EditText etNote;
     private MaterialSwitch swPinned;
     private RadioGroup rgMode;
@@ -71,6 +73,8 @@ public class CountdownEditActivity extends BaseActivity {
         content = findViewById(R.id.content);
         etTitle = findViewById(R.id.et_title);
         tvDate = findViewById(R.id.tv_date);
+        tvLunar = findViewById(R.id.tv_lunar);
+        tvElapsed = findViewById(R.id.tv_elapsed);
         etNote = findViewById(R.id.et_note);
         swPinned = findViewById(R.id.sw_pinned);
         rgMode = findViewById(R.id.rg_mode);
@@ -130,6 +134,10 @@ public class CountdownEditActivity extends BaseActivity {
         findViewById(R.id.row_date).setOnClickListener(v -> {
             press(v);
             pickDate();
+        });
+        findViewById(R.id.row_lunar).setOnClickListener(v -> {
+            press(v);
+            pickLunarDate();
         });
         bgPicker = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(), r -> {
@@ -227,16 +235,154 @@ public class CountdownEditActivity extends BaseActivity {
             tail = "已经 " + (-diff) + " 天";
         }
         String lunar = LunarUtil.format(pickedDate);
-        tvDate.setText(CountdownTime.formatDate(pickedDate)
-                + (lunar.isEmpty() ? "" : " · " + lunar) + " · " + tail);
-        if (tvDate.isLaidOut()) {
-            tvDate.setAlpha(0f);
-            tvDate.setTranslationY(dp(6));
-            tvDate.animate().alpha(1f).translationY(0f)
-                    .setDuration(180)
-                    .setInterpolator(new DecelerateInterpolator())
-                    .start();
+        if (lunar.startsWith("农历")) lunar = lunar.substring(2);
+        tvDate.setText(CountdownTime.formatDate(pickedDate));
+        tvLunar.setText(lunar.isEmpty() ? "—" : lunar);
+        tvElapsed.setText(tail);
+        fadeIn(tvDate);
+        fadeIn(tvLunar);
+        fadeIn(tvElapsed);
+    }
+
+    /** 文本轻微上浮淡入，切换日期时不生硬。 */
+    private void fadeIn(View v) {
+        if (v == null || !v.isLaidOut()) return;
+        v.setAlpha(0f);
+        v.setTranslationY(dp(6));
+        v.animate().alpha(1f).translationY(0f)
+                .setDuration(180)
+                .setInterpolator(new DecelerateInterpolator())
+                .start();
+    }
+
+    /** 自建农历选择器：年 / 月（含闰月）/ 日三级联动，确认后换算成公历时间戳。 */
+    private void pickLunarDate() {
+        LunarUtil.LunarDate cur = LunarUtil.toLunar(pickedDate);
+        final int year0 = cur == null ? 2000 : cur.year;
+        final int month0 = cur == null ? 1 : cur.month;
+        final int day0 = cur == null ? 1 : cur.day;
+        final boolean leap0 = cur != null && cur.leap;
+
+        final android.widget.NumberPicker npY = new android.widget.NumberPicker(this);
+        npY.setMinValue(1900);
+        npY.setMaxValue(2100);
+        npY.setValue(year0);
+        npY.setFormatter(v -> v + " 年");
+
+        final android.widget.NumberPicker npM = new android.widget.NumberPicker(this);
+        final android.widget.NumberPicker npD = new android.widget.NumberPicker(this);
+        npD.setMinValue(1);
+        npD.setMaxValue(30);
+        npD.setFormatter(v -> LunarUtil.dayName(v));
+
+        final int[] monthNums = new int[13];
+        final boolean[] monthLeaps = new boolean[13];
+        final int[] count = {0};
+        final int[] selM = {0};
+
+        final Runnable[] syncM = new Runnable[1];
+        final Runnable[] syncD = new Runnable[1];
+
+        syncM[0] = () -> {
+            int y = npY.getValue();
+            int leap = LunarUtil.leapMonthOf(y);
+            int keepMonth = count[0] > 0 ? monthNums[Math.min(selM[0], count[0] - 1)] : month0;
+            boolean keepLeap = count[0] > 0 && monthLeaps[Math.min(selM[0], count[0] - 1)];
+            int n = 0;
+            String[] labels = new String[13];
+            for (int m = 1; m <= 12; m++) {
+                monthNums[n] = m;
+                monthLeaps[n] = false;
+                labels[n] = LunarUtil.monthName(m);
+                n++;
+                if (leap == m) {
+                    monthNums[n] = m;
+                    monthLeaps[n] = true;
+                    labels[n] = "闰" + LunarUtil.monthName(m);
+                    n++;
+                }
+            }
+            count[0] = n;
+            String[] shown = new String[n];
+            System.arraycopy(labels, 0, shown, 0, n);
+            int idx = 0;
+            for (int i = 0; i < n; i++) {
+                if (monthNums[i] == keepMonth && monthLeaps[i] == keepLeap) {
+                    idx = i;
+                    break;
+                }
+            }
+            npM.setDisplayedValues(null);
+            npM.setMinValue(0);
+            npM.setMaxValue(n - 1);
+            npM.setDisplayedValues(shown);
+            npM.setValue(idx);
+            selM[0] = idx;
+        };
+
+        syncD[0] = () -> {
+            int y = npY.getValue();
+            int i = Math.min(selM[0], Math.max(count[0] - 1, 0));
+            int max = LunarUtil.daysOfMonth(y, monthNums[i], monthLeaps[i]);
+            if (max < 1) max = 30;
+            int cur2 = npD.getValue();
+            npD.setDisplayedValues(null);
+            npD.setMinValue(1);
+            npD.setMaxValue(max);
+            npD.setValue(Math.min(cur2, max));
+        };
+
+        syncM[0].run();
+        int idx0 = 0;
+        for (int i = 0; i < count[0]; i++) {
+            if (monthNums[i] == month0 && monthLeaps[i] == leap0) {
+                idx0 = i;
+                break;
+            }
         }
+        npM.setValue(idx0);
+        selM[0] = idx0;
+        syncD[0].run();
+        npD.setValue(Math.min(day0, npD.getMaxValue()));
+
+        npY.setOnValueChangedListener((p, o, nv) -> {
+            syncM[0].run();
+            syncD[0].run();
+        });
+        npM.setOnValueChangedListener((p, o, nv) -> {
+            selM[0] = nv;
+            syncD[0].run();
+        });
+
+        android.widget.LinearLayout box = new android.widget.LinearLayout(this);
+        box.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+        int pad = (int) dp(20);
+        box.setPadding(pad, (int) dp(8), pad, 0);
+        android.widget.LinearLayout.LayoutParams lp =
+                new android.widget.LinearLayout.LayoutParams(0,
+                        android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        box.addView(npY, lp);
+        box.addView(npM, new android.widget.LinearLayout.LayoutParams(0,
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f));
+        box.addView(npD, new android.widget.LinearLayout.LayoutParams(0,
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("按农历选择")
+                .setView(box)
+                .setNegativeButton("取消", null)
+                .setPositiveButton("确定", (d, w) -> {
+                    int y = npY.getValue();
+                    int i = selM[0];
+                    long t = LunarUtil.fromLunar(y, monthNums[i], npD.getValue(), monthLeaps[i]);
+                    if (t <= 0) {
+                        Toast.makeText(this, "这个农历日期不存在", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    pickedDate = t;
+                    refreshDateText();
+                })
+                .show();
     }
 
     /** 刷新背景行：有图显示缩略图与移除，无图提示选择。 */

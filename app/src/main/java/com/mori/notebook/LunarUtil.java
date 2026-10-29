@@ -112,4 +112,100 @@ public final class LunarUtil {
         if (day < 1 || day > 30) return "";
         return "农历" + (isLeap ? "闰" : "") + MONTH_NAME[month - 1] + "月" + DAY_NAME[day - 1];
     }
+
+    /** 农历日期（year 为农历年，month 1-12，day 1-30，leap 表示闰月）。 */
+    public static final class LunarDate {
+        public final int year;
+        public final int month;
+        public final int day;
+        public final boolean leap;
+
+        LunarDate(int year, int month, int day, boolean leap) {
+            this.year = year;
+            this.month = month;
+            this.day = day;
+            this.leap = leap;
+        }
+    }
+
+    /** 公历 → 农历日期；超范围返回 null。 */
+    public static LunarDate toLunar(long millis) {
+        if (millis <= 0) return null;
+        long offset = CountdownTime.dayNumber(millis) - BASE_DAY;
+        if (offset < 0) return null;
+        int year = 1900;
+        while (year <= 2100) {
+            int d = yearDays(year);
+            if (offset < d) break;
+            offset -= d;
+            year++;
+        }
+        if (year > 2100) return null;
+        int leap = leapMonth(year);
+        boolean isLeap = false;
+        int month = 0;
+        int remain = (int) offset;
+        for (int m = 1; m <= 12; m++) {
+            int d = monthDays(year, m);
+            if (remain < d) {
+                isLeap = false;
+                month = m;
+                break;
+            }
+            remain -= d;
+            if (leap > 0 && m == leap) {
+                int ld = leapDays(year);
+                if (remain < ld) {
+                    isLeap = true;
+                    month = m;
+                    break;
+                }
+                remain -= ld;
+            }
+            month = m;
+        }
+        if (month == 0) return null;
+        int day = remain + 1;
+        if (day < 1 || day > 30) return null;
+        return new LunarDate(year, month, day, isLeap);
+    }
+
+    /** 农历 → 公历时间戳；不存在的日期（如无该闰月）返回 0。 */
+    public static long fromLunar(int year, int month, int day, boolean leap) {
+        if (year < 1900 || year > 2100 || month < 1 || month > 12) return 0;
+        if (leap && leapMonth(year) != month) return 0;
+        int maxDay = leap ? leapDays(year) : monthDays(year, month);
+        if (day < 1 || day > maxDay) return 0;
+        long offset = 0;
+        for (int y = 1900; y < year; y++) offset += yearDays(y);
+        for (int m = 1; m < month; m++) {
+            offset += monthDays(year, m);
+            if (leapMonth(year) == m) offset += leapDays(year);
+        }
+        if (leap) offset += monthDays(year, month);
+        offset += day - 1;
+        return CountdownTime.addDays(CountdownTime.millisOf(1900, 1, 31), (int) offset);
+    }
+
+    /** 某农历年的闰月月份，0 表示无闰月。 */
+    public static int leapMonthOf(int year) {
+        if (year < 1900 || year > 2100) return 0;
+        return leapMonth(year);
+    }
+
+    /** 农历某月天数（leap 传 true 取闰月）。 */
+    public static int daysOfMonth(int year, int month, boolean leap) {
+        if (year < 1900 || year > 2100 || month < 1 || month > 12) return 30;
+        return leap ? leapDays(year) : monthDays(year, month);
+    }
+
+    public static String monthName(int month) {
+        if (month < 1 || month > 12) return "";
+        return MONTH_NAME[month - 1] + "月";
+    }
+
+    public static String dayName(int day) {
+        if (day < 1 || day > 30) return "";
+        return DAY_NAME[day - 1];
+    }
 }

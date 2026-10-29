@@ -8,13 +8,11 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="?attr/colorSurface"
         android:orientation="vertical">
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:background="?attr/colorSurface"
         app:navigationIcon="?attr/homeAsUpIndicator"
         app:title="时间轴"
         app:titleTextColor="?attr/colorOnSurface" />
