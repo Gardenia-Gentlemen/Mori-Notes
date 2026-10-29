@@ -50,9 +50,9 @@
             android:paddingEnd="8dp"
             android:paddingTop="2dp"
             android:paddingBottom="2dp"
-            android:text="By KIPPU"
-            android:textAppearance="?attr/textAppearanceTitleSmall"
-            android:textColor="?attr/colorOnSurfaceVariant" />
+            android:text="Refer to TimeTrace [By KIPPU]"
+            android:textAppearance="?attr/textAppearanceLabelSmall"
+            android:textColor="?attr/colorOutline" />
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
