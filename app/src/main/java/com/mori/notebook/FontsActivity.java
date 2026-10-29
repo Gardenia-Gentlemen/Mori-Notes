@@ -130,16 +130,36 @@ public class FontsActivity extends BaseActivity {
                 new ActivityResultContracts.OpenMultipleDocuments(), uris -> {
                     if (uris == null || uris.isEmpty()) return;
                     int ok = 0;
+                    int dup = 0;
+                    int bad = 0;
                     for (Uri uri : uris) {
-                        if (uri == null) continue;
-                        if (FontImporter.importTo(this, uri, true) != null) ok++;
+                        if (uri == null) {
+                            bad++;
+                            continue;
+                        }
+                        FontImporter.ImportResult r = FontImporter.importUri(this, uri);
+                        if (r.code == FontImporter.OK) ok++;
+                        else if (r.code == FontImporter.DUPLICATE) dup++;
+                        else bad++;
                     }
                     reload();
-                    int all = uris.size();
-                    if (ok == 0) toast("导入失败：选中的文件都不是有效字体");
-                    else if (ok < all) toast("已导入 " + ok + " 个字体，跳过 " + (all - ok) + " 个无效文件");
-                    else if (ok == 1) toast("已加入 1 个字体");
-                    else toast("已导入 " + ok + " 个字体");
+                    if (ok == 0 && dup == 0) {
+                        toast("导入失败：选中的文件都不是有效字体");
+                    } else if (ok == 0 && bad == 0) {
+                        toast("已有此字体，未重复导入");
+                    } else {
+                        StringBuilder sb = new StringBuilder();
+                        if (ok > 0) sb.append("已导入 ").append(ok).append(" 个字体");
+                        if (dup > 0) {
+                            if (sb.length() > 0) sb.append("，");
+                            sb.append(dup).append(" 个已有此字体");
+                        }
+                        if (bad > 0) {
+                            if (sb.length() > 0) sb.append("，");
+                            sb.append(bad).append(" 个无效文件");
+                        }
+                        toast(sb.toString());
+                    }
                 });
 
         zipPicker = registerForActivityResult(
@@ -454,17 +474,37 @@ public class FontsActivity extends BaseActivity {
                 return;
             }
             int ok = 0;
+            int dup = 0;
+            int bad = 0;
             for (File f : found) {
-                if (FontImporter.importFile(this, f) != null) ok++;
+                FontImporter.ImportResult r = FontImporter.importFileResult(this, f);
+                if (r.code == FontImporter.OK) ok++;
+                else if (r.code == FontImporter.DUPLICATE) dup++;
+                else bad++;
             }
             deleteDir(outDir);
             final int done = ok;
-            final int all = found.size();
+            final int dupN = dup;
+            final int badN = bad;
             runOnUiThread(() -> {
                 reload();
-                if (done == 0) toast("导入失败：压缩包里的字体都无法识别");
-                else if (done < all) toast("已导入 " + done + " 个字体，跳过 " + (all - done) + " 个无效文件");
-                else toast("已导入 " + done + " 个字体");
+                if (done == 0 && dupN == 0) {
+                    toast("导入失败：压缩包里的字体都无法识别");
+                } else if (done == 0 && badN == 0) {
+                    toast("压缩包里的字体都已在字体库中，无需重复导入");
+                } else {
+                    StringBuilder sb = new StringBuilder();
+                    if (done > 0) sb.append("已导入 ").append(done).append(" 个字体");
+                    if (dupN > 0) {
+                        if (sb.length() > 0) sb.append("，");
+                        sb.append(dupN).append(" 个已有此字体");
+                    }
+                    if (badN > 0) {
+                        if (sb.length() > 0) sb.append("，");
+                        sb.append(badN).append(" 个无效文件");
+                    }
+                    toast(sb.toString());
+                }
             });
         }).start();
     }

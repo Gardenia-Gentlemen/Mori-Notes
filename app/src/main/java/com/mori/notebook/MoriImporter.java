@@ -211,11 +211,13 @@ public final class MoriImporter {
         return added;
     }
 
-    /** 导入字体库文件，重名自动加序号，不覆盖已有字体 */
+    /** 导入字体库文件：内容已存在则跳过，不重复写入，也不覆盖已有字体 */
     private static int importFonts(Activity act, java.util.List<MoriFile.FontItem> list) {
         if (list == null || list.isEmpty()) return 0;
         java.io.File dir = FontImporter.fontDir(act);
         if (dir == null) return 0;
+        java.io.File stage = new java.io.File(act.getCacheDir(), "mori_font_stage");
+        if (!stage.exists() && !stage.mkdirs()) return 0;
         int added = 0;
         for (MoriFile.FontItem item : list) {
             if (item == null || item.data == null || item.data.length == 0) continue;
@@ -227,22 +229,41 @@ public final class MoriImporter {
                 base = raw.substring(0, dot);
                 ext = raw.substring(dot);
             }
-            java.io.File target = new java.io.File(dir, base + ext);
-            int i = 2;
-            while (target.exists()) {
-                target = new java.io.File(dir, base + "-" + i + ext);
-                i++;
-            }
-            try (java.io.FileOutputStream out = new java.io.FileOutputStream(target)) {
-                out.write(item.data);
-                out.flush();
-                added++;
+            base = base.replaceAll("[\\\\/:*?\"<>|]", "_").trim();
+            if (base.isEmpty()) base = "custom";
+            java.io.File tmp = new java.io.File(stage, base + ext);
+            try {
+                java.io.FileOutputStream out = new java.io.FileOutputStream(tmp);
+                try {
+                    out.write(item.data);
+                    out.flush();
+                } finally {
+                    out.close();
+                }
+                if (FontImporter.importFileResult(act, tmp).isOk()) added++;
             } catch (Exception ignored) {
+            } finally {
+                tmp.delete();
             }
         }
+        deleteDirQuiet(stage);
         if (added > 0) Fonts.clear();
         return added;
     }
+
+    /** 尽力删除临时目录 */
+    private static void deleteDirQuiet(java.io.File dir) {
+        if (dir == null) return;
+        java.io.File[] all = dir.listFiles();
+        if (all != null) {
+            for (java.io.File f : all) {
+                if (f != null && f.isDirectory()) deleteDirQuiet(f);
+                else if (f != null) f.delete();
+            }
+        }
+        dir.delete();
+    }
+
     /** 拼接导入结果文案，跳过 0 项 */
     private static String summary(int notes, int countdowns, int todos, int fonts) {
         StringBuilder sb = new StringBuilder();
