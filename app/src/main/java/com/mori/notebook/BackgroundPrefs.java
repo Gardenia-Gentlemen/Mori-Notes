@@ -3,60 +3,38 @@ package com.mori.notebook;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Color;
-import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
-import android.graphics.drawable.LayerDrawable;
-import android.net.Uri;
 import android.view.View;
 
 import com.google.android.material.color.MaterialColors;
 
-/** 全局背景：预设纯色/渐变 + 相册图片。深色模式自动使用深色变体。 */
+/** 全局背景：默认 / 蓝紫渐变 / 日落渐变。深色模式自动使用深色变体。 */
 public class BackgroundPrefs {
 
-    public static final String[] NAMES = {
-            "默认", "暖白", "淡绿", "淡蓝", "淡紫", "蓝紫渐变", "日落渐变", "自定义图片"
-    };
+    public static final int STYLE_DEFAULT = 0;
+    public static final int STYLE_BLUE_PURPLE = 1;
+    public static final int STYLE_SUNSET = 2;
 
-    private static final int[] SOLIDS = {
-            Color.TRANSPARENT,
-            0xFFFFF8F2,
-            0xFFEAF6EE,
-            0xFFE8F2FA,
-            0xFFF2ECFA
-    };
-
-    private static final int[] SOLIDS_DARK = {
-            Color.TRANSPARENT,
-            0xFF231F1A,
-            0xFF16211A,
-            0xFF161C21,
-            0xFF1E1A24
-    };
+    public static final String[] NAMES = {"默认", "蓝紫渐变", "日落渐变"};
 
     private static SharedPreferences prefs(Context c) {
         return c.getSharedPreferences("bg", Context.MODE_PRIVATE);
     }
 
     public static int getStyle(Context c) {
-        return prefs(c).getInt("style", 0);
+        int s = prefs(c).getInt("style", STYLE_DEFAULT);
+        if (s < 0 || s >= NAMES.length) {
+            prefs(c).edit().putInt("style", STYLE_DEFAULT).apply();
+            return STYLE_DEFAULT;
+        }
+        return s;
     }
 
     public static void setStyle(Context c, int style) {
+        if (style < 0 || style >= NAMES.length) style = STYLE_DEFAULT;
         prefs(c).edit().putInt("style", style).apply();
-    }
-
-    public static String getImageUri(Context c) {
-        return prefs(c).getString("uri", null);
-    }
-
-    public static void setImageUri(Context c, Uri uri) {
-        prefs(c).edit().putString("uri", uri.toString()).apply();
     }
 
     public static boolean isNight(Context c) {
@@ -68,26 +46,15 @@ public class BackgroundPrefs {
     public static Drawable drawable(Context context) {
         int style = getStyle(context);
         boolean night = isNight(context);
-        if (style == 7) {
-            Drawable d = imageDrawable(context);
-            if (d == null) {
-                return new ColorDrawable(surfaceColor(context));
-            }
-            return new LayerDrawable(new Drawable[]{
-                    new ColorDrawable(night ? 0x66000000 : 0x4DFFFFFF), d});
-        }
-        if (style == 5) {
+        if (style == STYLE_BLUE_PURPLE) {
             return new GradientDrawable(GradientDrawable.Orientation.TL_BR,
                     night ? new int[]{0xFF1A1B2E, 0xFF221B2E, 0xFF2A1B24}
-                            : new int[]{0xFFE8EAFF, 0xFFF3E7FF, 0xFFFFE9F2});
+                          : new int[]{0xFFE8EAFF, 0xFFF3E7FF, 0xFFFFE9F2});
         }
-        if (style == 6) {
+        if (style == STYLE_SUNSET) {
             return new GradientDrawable(GradientDrawable.Orientation.TL_BR,
                     night ? new int[]{0xFF2B211A, 0xFF2B1B20, 0xFF241B2B}
-                            : new int[]{0xFFFFF1E1, 0xFFFFE3E9, 0xFFF6E7FF});
-        }
-        if (style >= 1 && style <= 4) {
-            return new ColorDrawable(night ? SOLIDS_DARK[style] : SOLIDS[style]);
+                          : new int[]{0xFFFFF1E1, 0xFFFFE3E9, 0xFFF6E7FF});
         }
         return new ColorDrawable(surfaceColor(context));
     }
@@ -104,42 +71,5 @@ public class BackgroundPrefs {
     public static void apply(Context context, View root) {
         if (root == null) return;
         root.setBackground(drawable(context));
-    }
-
-    private static Bitmap imgCache;
-    private static String imgKey;
-
-    private static Drawable bitmapDrawable(Context context, Bitmap bmp) {
-        BitmapDrawable bd = new BitmapDrawable(context.getResources(), bmp);
-        bd.setGravity(android.view.Gravity.FILL);
-        return bd;
-    }
-
-    private static Drawable imageDrawable(Context context) {
-        String s = getImageUri(context);
-        if (s == null) return null;
-        if (imgCache != null && s.equals(imgKey)) return bitmapDrawable(context, imgCache);
-        try {
-            Uri uri = Uri.parse(s);
-            BitmapFactory.Options o = new BitmapFactory.Options();
-            o.inJustDecodeBounds = true;
-            try (java.io.InputStream in = context.getContentResolver().openInputStream(uri)) {
-                BitmapFactory.decodeStream(in, null, o);
-            }
-            int sample = 1;
-            while (o.outWidth / (sample * 2) >= 1080) sample *= 2;
-            BitmapFactory.Options o2 = new BitmapFactory.Options();
-            o2.inSampleSize = sample;
-            Bitmap bmp;
-            try (java.io.InputStream in = context.getContentResolver().openInputStream(uri)) {
-                bmp = BitmapFactory.decodeStream(in, null, o2);
-            }
-            if (bmp == null) return null;
-            imgCache = bmp;
-            imgKey = s;
-            return bitmapDrawable(context, bmp);
-        } catch (Exception e) {
-            return null;
-        }
     }
 }

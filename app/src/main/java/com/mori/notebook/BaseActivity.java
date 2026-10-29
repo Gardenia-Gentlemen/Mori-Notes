@@ -12,24 +12,11 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 public class BaseActivity extends AppCompatActivity {
 
-    private ActivityResultLauncher<String[]> imagePicker;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         applyCutoutMode();
-        imagePicker = registerForActivityResult(new ActivityResultContracts.OpenDocument(), uri -> {
-            if (uri != null) {
-                try {
-                    getContentResolver().takePersistableUriPermission(uri,
-                            android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                } catch (Exception ignored) {
-                }
-                BackgroundPrefs.setImageUri(this, uri);
-                BackgroundPrefs.setStyle(this, 7);
-                applyBackground();
-            }
-        });
     }
 
     /** 让窗口延伸到刘海/挖孔区域，背景铺满，横屏不再出现黑边。 */
@@ -76,15 +63,8 @@ public class BaseActivity extends AppCompatActivity {
         new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.background)
                 .setItems(BackgroundPrefs.NAMES, (dialog, which) -> {
-                    if (which == 7) {
-                        try {
-                            imagePicker.launch(new String[]{"image/*"});
-                        } catch (Exception ignored) {
-                        }
-                    } else {
-                        BackgroundPrefs.setStyle(this, which);
-                        applyBackground();
-                    }
+                    BackgroundPrefs.setStyle(this, which);
+                    applyBackground();
                 })
                 .show();
     }
