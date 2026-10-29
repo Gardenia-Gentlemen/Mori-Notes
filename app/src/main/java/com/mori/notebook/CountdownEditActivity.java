@@ -12,6 +12,7 @@ import android.text.InputType;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.DecelerateInterpolator;
+import android.view.animation.PathInterpolator;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.RadioGroup;
@@ -276,25 +277,31 @@ public class CountdownEditActivity extends BaseActivity {
         }
         String lunar = LunarUtil.format(pickedDate);
         if (lunar.startsWith("农历")) lunar = lunar.substring(2);
-        tvDate.setText(CountdownTime.formatDate(pickedDate));
-        tvLunar.setText(lunar.isEmpty() ? "—" : lunar);
-        tvElapsed.setText(tail);
-        fadeIn(tvDate);
-        fadeIn(tvLunar);
-        fadeIn(tvElapsed);
+        setRow(tvDate, CountdownTime.formatDate(pickedDate), 0);
+        setRow(tvLunar, lunar.isEmpty() ? "—" : lunar, 45);
+        setRow(tvElapsed, tail, 90);
     }
-
-    /** 文本轻微上浮淡入，切换日期时不生硬。 */
-    private void fadeIn(View v) {
+    /** 只有内容真的变了才重放动画，避免重复刷新时闪烁。 */
+    private void setRow(TextView v, String text, long delay) {
+        if (v == null) return;
+        if (text.contentEquals(v.getText())) return;
+        v.setText(text);
+        fadeIn(v, delay);
+    }
+    /** 文本轻微上浮淡入；delay 让三行自上而下错峰，像水波一样铺开。 */
+    private void fadeIn(View v, long delay) {
         if (v == null || !v.isLaidOut()) return;
+        v.animate().cancel();
         v.setAlpha(0f);
-        v.setTranslationY(dp(6));
-        v.animate().alpha(1f).translationY(0f)
-                .setDuration(180)
-                .setInterpolator(new DecelerateInterpolator())
+        v.setTranslationY(dp(8));
+        v.setScaleX(0.985f);
+        v.setScaleY(0.985f);
+        v.animate().alpha(1f).translationY(0f).scaleX(1f).scaleY(1f)
+                .setStartDelay(delay)
+                .setDuration(260)
+                .setInterpolator(new PathInterpolator(0.22f, 0f, 0f, 1f))
                 .start();
     }
-
     /** 自建农历选择器：年 / 月（含闰月）/ 日三级联动，确认后换算成公历时间戳。 */
     private void pickLunarDate() {
         LunarUtil.LunarDate cur = LunarUtil.toLunar(pickedDate);
