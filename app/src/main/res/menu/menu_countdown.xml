@@ -18,6 +18,10 @@
         android:title="多选"
         app:showAsAction="never" />
     <item
+        android:id="@+id/action_fonts"
+        android:title="字体"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/action_settings"
         android:title="设置"
         app:showAsAction="never" />

@@ -92,6 +92,9 @@
         <activity
             android:name=".SettingsActivity"
             android:parentActivityName=".MainActivity" />
+        <activity
+            android:name=".FontsActivity"
+            android:parentActivityName=".MainActivity" />
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

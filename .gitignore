@@ -12,3 +12,5 @@ keystore.properties
 .idea/
 .DS_Store
 keystore_local.jks
+__pycache__/
+*.pyc

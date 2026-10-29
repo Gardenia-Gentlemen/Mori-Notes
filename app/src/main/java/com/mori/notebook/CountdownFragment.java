@@ -174,6 +174,10 @@ public class CountdownFragment extends Fragment {
             shareAllImage();
             return true;
         }
+        if (id == R.id.action_fonts) {
+            startActivity(new Intent(requireContext(), FontsActivity.class));
+            return true;
+        }
         if (id == R.id.action_settings) {
             startActivity(new Intent(requireContext(), SettingsActivity.class));
             return true;

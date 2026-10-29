@@ -110,6 +110,58 @@ public final class FontImporter {
         return target.getAbsolutePath();
     }
 
+    /** 把一个已存在的字体文件复制进字体库（用于压缩包批量导入）。失败返回 null。 */
+    public static String importFile(Context ctx, File src) {
+        if (ctx == null || src == null || !src.isFile()) return null;
+        if (src.length() <= 0 || src.length() > MAX_SIZE) return null;
+        String name = src.getName();
+        String lower = name.toLowerCase(Locale.ROOT);
+        String ext;
+        if (lower.endsWith(".otf")) ext = ".otf";
+        else if (lower.endsWith(".ttc")) ext = ".ttc";
+        else if (lower.endsWith(".ttf")) ext = ".ttf";
+        else return null;
+        String raw = name.substring(0, name.length() - ext.length());
+        raw = raw.replaceAll("[\\\\/:*?\"<>|]", "_").trim();
+        if (raw.isEmpty()) raw = "custom";
+        File dir = fontDir(ctx);
+        if (dir == null) return null;
+        File tmp = new File(dir, "tmp_import" + ext);
+        try {
+            copyFile(src, tmp);
+            if (Typeface.createFromFile(tmp) == null) {
+                throw new java.io.IOException("字体无效");
+            }
+        } catch (Throwable t) {
+            tmp.delete();
+            return null;
+        }
+        File target = unique(dir, raw, ext);
+        if (!tmp.renameTo(target)) {
+            tmp.delete();
+            return null;
+        }
+        Fonts.clear();
+        return target.getAbsolutePath();
+    }
+
+    private static void copyFile(File src, File dst) throws java.io.IOException {
+        InputStream in = new java.io.FileInputStream(src);
+        try {
+            FileOutputStream os = new FileOutputStream(dst);
+            try {
+                byte[] buf = new byte[8192];
+                int n;
+                while ((n = in.read(buf)) > 0) os.write(buf, 0, n);
+                os.flush();
+            } finally {
+                os.close();
+            }
+        } finally {
+            in.close();
+        }
+    }
+
     /** 字体库目录。 */
     public static File fontDir(Context ctx) {
         File dir = new File(ctx.getFilesDir(), "fonts");

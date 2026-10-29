@@ -22,6 +22,7 @@ import subprocess
 import sys
 import urllib.parse
 import urllib.request
+import urllib.error
 import zipfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -189,11 +190,31 @@ def update_readme_features(version, write=True):
     return added, merged, bullets
 
 
+def upload_asset(rel, path, name, label, tok):
+    """用 curl 上传附件：本机 Python TLS 连 uploads.github.com 会握手失败，
+    而 curl 正常，故统一走 curl。"""
+    url = rel["upload_url"].split("{")[0] + "?" + urllib.parse.urlencode(
+        {"name": name, "label": label})
+    ctype = ("application/vnd.android.package-archive"
+             if name.endswith(".apk") else "application/zip")
+    out = sh("curl -sS -X POST -H 'Authorization: Bearer %s' "
+             "-H 'Content-Type: %s' --data-binary @'%s' '%s'"
+             % (tok, ctype, path, url), check=False)
+    try:
+        r = json.loads(out or "{}")
+    except Exception:
+        return 0, {"message": out[:300]}
+    return (200 if r.get("state") == "uploaded" else 0), r
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("version", help="新版本号，例如 1.4 / 1.4.1")
     ap.add_argument("--build", action="store_true", help="先执行 gradle assembleRelease")
     ap.add_argument("--apk", help="指定已构建的 APK 路径")
+    ap.add_argument("--readme", action="store_true",
+                    help="把本版 CHANGELOG 的 **标题**：说明 条目并入 README「## 功能」"
+                         "（默认不动 README，避免旧条目反复堆积）")
     ap.add_argument("--dry-run", action="store_true", help="只打印计划，不提交不推送不建 Release")
     a = ap.parse_args()
     v = a.version
@@ -223,7 +244,7 @@ def main():
     if a.build:
         print("构建中…")
         gradle = "./gradlew" if os.path.exists(os.path.join(ROOT, "gradlew")) else "gradle"
-        sh("%s assembleRelease --offline -q" % gradle, check=True)
+        sh("%s assembleRelease -q" % gradle, check=True)
         apk = find_apk(v)
     if not os.path.exists(apk):
         sys.exit("APK 不存在: %s" % apk)
@@ -234,7 +255,8 @@ def main():
         return
 
     snapshot_src(v)
-    update_readme_features(v, write=True)
+    if a.readme:
+        update_readme_features(v, write=True)
     prev_zip = zip_src(prev) if prev else None
 
     note = os.path.join(ROOT, "releases", "v" + v, "SOURCE.md")
@@ -247,9 +269,10 @@ def main():
     tok = token()
     sh("git add -A")
     sh("git commit -q -m 'v%s: 归档源码快照' || true" % v)
-    push_url = "https://x-access-token:%s@github.com/%s.git" % (tok, OWNER_REPO)
-    print(sh("git push -q '%s' HEAD:master 2>&1" % push_url, check=False).strip() or "push OK")
-    sh("git remote set-url origin https://github.com/%s.git" % OWNER_REPO, check=False)
+    # 本机 github.com:443 不通，origin 已配置为 SSH（ssh.github.com:443），走 origin 推送
+    print(sh("git push -q origin HEAD:master 2>&1", check=False).strip() or "push OK")
+    sh("git tag -a v%s -m 'v%s' 2>/dev/null || true" % (v, v), check=False)
+    print(sh("git push -q origin v%s 2>&1" % v, check=False).strip() or "tag push OK")
 
     st, rel = api("POST", "/repos/%s/releases" % OWNER_REPO, tok, {
         "tag_name": "v" + v,
@@ -266,13 +289,8 @@ def main():
     assets = [(apk, "notebook-v%s.apk" % v, "")]
     if prev_zip:
         assets.append((prev_zip, "notebook-v%s-src.zip" % prev, "源代码 (v%s)" % prev))
-    up = rel["upload_url"].split("{")[0]
     for path, name, label in assets:
-        q = urllib.parse.urlencode({"name": name, "label": label})
-        data = open(path, "rb").read()
-        st, r2 = api("POST", up[len(API):] + "?" + q, tok, raw=data,
-                     ctype="application/vnd.android.package-archive"
-                     if name.endswith(".apk") else "application/zip")
+        st, r2 = upload_asset(rel, path, name, label, tok)
         print(" asset %s -> %s %s" % (name, st, "" if st in (200, 201) else r2.get("message")))
 
     print("完成: https://github.com/%s/releases/tag/v%s" % (OWNER_REPO, v))
