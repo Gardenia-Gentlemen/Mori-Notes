@@ -73,4 +73,24 @@ public class TimelineNoteStore {
         items.add(n);
         save();
     }
+
+    /** 修改内容：文字与地点可变，时间/时区保持不变。 */
+    public void update(TimelineNote n) {
+        for (TimelineNote t : items) {
+            if (t.id.equals(n.id)) {
+                t.text = n.text;
+                t.place = n.place;
+                save();
+                return;
+            }
+        }
+    }
+
+    public void remove(String id) {
+        java.util.Iterator<TimelineNote> it = items.iterator();
+        while (it.hasNext()) {
+            if (it.next().id.equals(id)) it.remove();
+        }
+        save();
+    }
 }

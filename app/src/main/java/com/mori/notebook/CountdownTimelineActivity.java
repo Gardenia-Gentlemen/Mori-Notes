@@ -81,34 +81,40 @@ public class CountdownTimelineActivity extends BaseActivity {
         findViewById(R.id.fab_add).setOnClickListener(v -> showAddDialog());
     }
 
-    /** 右下角新建：记录一条手记，时间强制取本机当前时间与时区。 */
-    private void showAddDialog() {
+    /** 新建 / 修改回忆：时间只在新建时取本机当前时间，修改不改时间。 */
+    private void showNoteDialog(TimelineNote editing) {
         if (item == null) return;
+        boolean isNew = editing == null;
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(dp(24), dp(8), dp(24), 0);
 
         final EditText etText = new EditText(this);
-        etText.setHint("文字");
+        etText.setHint("事件");
         etText.setSingleLine(false);
+        if (!isNew) etText.setText(editing.text);
         box.addView(etText);
 
         final EditText etPlace = new EditText(this);
         etPlace.setHint("地点");
+        if (!isNew) etPlace.setText(editing.place);
         box.addView(etPlace);
 
-        TimeZone tz = TimeZone.getDefault();
+        TimeZone tz = isNew ? TimeZone.getDefault()
+                : TimeZone.getTimeZone(TextUtils.isEmpty(editing.timeZone)
+                        ? TimeZone.getDefault().getID() : editing.timeZone);
+        long at = isNew ? System.currentTimeMillis() : editing.timeMs;
         SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
         fmt.setTimeZone(tz);
         TextView tvTime = new TextView(this);
         tvTime.setTextSize(12);
         tvTime.setPadding(0, dp(8), 0, 0);
-        tvTime.setText("时间：保存时自动取本机当前时间\n"
-                + fmt.format(new Date()) + " · " + tz.getID());
+        tvTime.setText((isNew ? "时间：保存时自动取本机当前时间\n" : "时间：创建后固定，修改不会改变\n")
+                + fmt.format(new Date(at)) + " · " + tz.getID());
         box.addView(tvTime);
 
         new MaterialAlertDialogBuilder(this)
-                .setTitle("新建时间轴")
+                .setTitle(isNew ? "新建回忆" : "修改内容")
                 .setView(box)
                 .setNegativeButton("取消", null)
                 .setPositiveButton("保存", (d, w) -> {
@@ -118,15 +124,48 @@ public class CountdownTimelineActivity extends BaseActivity {
                         Toast.makeText(this, "写点什么吧", Toast.LENGTH_SHORT).show();
                         return;
                     }
-                    TimelineNote n = new TimelineNote();
-                    n.id = java.util.UUID.randomUUID().toString();
-                    n.countdownId = item.id;
-                    n.text = text;
-                    n.place = place;
-                    n.timeMs = System.currentTimeMillis();
-                    n.timeZone = TimeZone.getDefault().getID();
-                    TimelineNoteStore.get(this).add(n);
+                    TimelineNoteStore store = TimelineNoteStore.get(this);
+                    if (isNew) {
+                        TimelineNote n = new TimelineNote();
+                        n.id = java.util.UUID.randomUUID().toString();
+                        n.countdownId = item.id;
+                        n.text = text;
+                        n.place = place;
+                        n.timeMs = System.currentTimeMillis();
+                        n.timeZone = TimeZone.getDefault().getID();
+                        store.add(n);
+                    } else {
+                        editing.text = text;
+                        editing.place = place;
+                        store.update(editing);
+                    }
                     bind(item);
+                })
+                .show();
+    }
+
+    private void showAddDialog() {
+        showNoteDialog(null);
+    }
+
+    /** 长按回忆节点：修改内容 / 删除。 */
+    private void showNoteMenu(TimelineNote n) {
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(TextUtils.isEmpty(n.text) ? "这条回忆" : n.text)
+                .setItems(new String[]{"修改内容", "删除这条回忆"}, (d, which) -> {
+                    if (which == 0) {
+                        showNoteDialog(n);
+                    } else {
+                        new MaterialAlertDialogBuilder(this)
+                                .setTitle("删除这条回忆")
+                                .setMessage("删除后不可恢复。")
+                                .setNegativeButton("取消", null)
+                                .setPositiveButton("删除", (dd, ww) -> {
+                                    TimelineNoteStore.get(this).remove(n.id);
+                                    bind(item);
+                                })
+                                .show();
+                    }
                 })
                 .show();
     }
@@ -199,7 +238,7 @@ public class CountdownTimelineActivity extends BaseActivity {
                         .getDisplayName(false, TimeZone.SHORT));
             }
             String main = TextUtils.isEmpty(n.text) ? "记录" : n.text;
-            nodes.add(new Node(n.timeMs, main, sub.toString(), true));
+            nodes.add(new Node(n.timeMs, main, sub.toString(), n));
         }
         Collections.sort(nodes, (x, y) -> Long.compare(x.date, y.date));
 
@@ -264,18 +303,21 @@ public class CountdownTimelineActivity extends BaseActivity {
         final long date;
         final String title;
         final String sub;
-        /** 是否为用户手记（样式上突出显示）。 */
+        /** 是否为用户回忆（样式上突出显示）。 */
         final boolean note;
+        /** 回忆节点对应的数据，里程碑为 null。 */
+        final TimelineNote ref;
 
         Node(long date, String title, String sub) {
-            this(date, title, sub, false);
+            this(date, title, sub, null);
         }
 
-        Node(long date, String title, String sub, boolean note) {
+        Node(long date, String title, String sub, TimelineNote ref) {
             this.date = date;
             this.title = title;
             this.sub = sub;
-            this.note = note;
+            this.ref = ref;
+            this.note = ref != null;
         }
     }
 
@@ -330,6 +372,14 @@ public class CountdownTimelineActivity extends BaseActivity {
         texts.addView(sub);
 
         row.addView(texts);
+        if (node.ref != null) {
+            final TimelineNote ref = node.ref;
+            row.setLongClickable(true);
+            row.setOnLongClickListener(v -> {
+                showNoteMenu(ref);
+                return true;
+            });
+        }
         box.addView(row);
     }
 }

@@ -123,6 +123,6 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_margin="20dp"
-        android:contentDescription="新建时间轴"
+        android:contentDescription="新建回忆"
         app:srcCompat="@drawable/ic_add" />
 </FrameLayout>
