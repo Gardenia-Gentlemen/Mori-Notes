@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_add_countdown"
+        android:title="新建"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_save_image"
+        android:title="保存图片"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_share_image"
+        android:title="分享图片"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_select"
+        android:title="多选"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_fonts"
+        android:title="字体"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_settings"
+        android:title="设置"
+        app:showAsAction="never" />
+</menu>

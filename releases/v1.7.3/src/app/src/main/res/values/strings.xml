@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Mori Notes</string>
+    <string name="new_markdown">新建 Markdown 笔记</string>
+    <string name="new_mind">新建思维笔记</string>
+    <string name="preview">预览</string>
+    <string name="edit">编辑</string>
+    <string name="background">背景</string>
+    <string name="empty_hint">还没有笔记，点右下角 + 新建</string>
+    <string name="md_hint">在这里写 Markdown…\n\n# 标题\n**粗体** *斜体* `代码`\n- 列表\n- [ ] 待办\n&gt; 引用\n```\n代码块\n```</string>
+    <string name="settings">设置</string>
+    <string name="grid_mode">宫格视图</string>
+    <string name="list_mode">列表视图</string>
+    <string name="export">导出</string>
+    <string name="mind_map">思维导图</string>
+    <string name="new_text">纯文本笔记</string>
+    <string name="plain">纯文本</string>
+    <string name="appearance">外观</string>
+    <string name="theme">深色模式</string>
+    <string name="pick_background">更换背景</string>
+</resources>
