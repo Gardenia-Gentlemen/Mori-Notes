@@ -374,6 +374,28 @@
                 android:gravity="center"
                 android:textSize="12sp"
                 android:text="版本" />
+            <TextView
+                android:id="@+id/tv_author"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:alpha="0.75"
+                android:gravity="center"
+                android:letterSpacing="0.08"
+                android:text="@string/app_name"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:textSize="13sp" />
+            <TextView
+                android:id="@+id/tv_copyright"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="24dp"
+                android:alpha="0.6"
+                android:gravity="center"
+                android:text="@string/footer_copyright"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:textSize="11sp" />
         </LinearLayout>
     </ScrollView>
 </LinearLayout>
