@@ -505,15 +505,15 @@ public final class ShareUtils {
         return v < 0 ? 0 : (v > 255 ? 255 : v);
     }
 
-    /** 右下角水印：By Mori Notes，楷体（霞鹜文楷）。 */
+    /** 底部居中水印：By Mori Notes，楷体（霞鹜文楷），半透明白。 */
     private static void drawWatermark(Context ctx, Canvas canvas, int w, int h) {
         Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
         p.setTypeface(Fonts.watermark(ctx));
         p.setTextSize(dp(ctx, 13));
-        p.setTextAlign(Paint.Align.RIGHT);
-        p.setColor(0xCCFFFFFF);
-        p.setShadowLayer(dp(ctx, 4), 0, dp(ctx, 1), 0x66000000);
-        canvas.drawText("By Mori Notes", w - dp(ctx, 14), h - dp(ctx, 10), p);
+        p.setTextAlign(Paint.Align.CENTER);
+        p.setColor(0x99FFFFFF);
+        p.setShadowLayer(dp(ctx, 4), 0, dp(ctx, 1), 0x55000000);
+        canvas.drawText("By Mori Notes", w / 2f, h - dp(ctx, 10), p);
     }
 
     /** 卡片投影：沿圆角矩形向外柔和投射。 */
