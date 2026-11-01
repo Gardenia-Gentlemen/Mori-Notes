@@ -76,6 +76,18 @@ public class MainActivity extends BaseActivity {
         nav.setSelectedItemId(navIdOf(startPage));
         updateToolbar(startPage);
         deliverOpenIntent(getIntent());
+        requestNotificationPermission();
+    }
+
+    /** Android 13+ 请求通知权限（待办提醒用） */
+    private void requestNotificationPermission() {
+        try {
+            if (android.os.Build.VERSION.SDK_INT < 33) return;
+            if (checkSelfPermission("android.permission.POST_NOTIFICATIONS")
+                    == android.content.pm.PackageManager.PERMISSION_GRANTED) return;
+            requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 1001);
+        } catch (Throwable ignored) {
+        }
     }
     /** 底栏透明，图标/文字取当前主题色，切深色模式后同步。 */
     private void applyNavTheme() {

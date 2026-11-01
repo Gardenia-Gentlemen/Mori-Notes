@@ -39,6 +39,8 @@ public class HomeFragment extends Fragment {
     /** 已处理过的外部文件 Uri，避免重复导入 */
     private Uri lastOpenedUri;
     private boolean toolbarReady;
+    /** 搜索关键词（空 = 不搜索） */
+    private String query = "";
 
     @Nullable
     @Override
@@ -129,6 +131,36 @@ public class HomeFragment extends Fragment {
             tb.setTitle(R.string.app_name);
         }
         setNavVisible(!selecting);
+        attachSearch(tb);
+    }
+
+    /** 顶部搜索框：关键词实时过滤列表 */
+    private void attachSearch(MaterialToolbar tb) {
+        android.view.MenuItem item = tb.getMenu().findItem(R.id.action_search);
+        if (item == null) return;
+        android.view.View av = item.getActionView();
+        if (!(av instanceof androidx.appcompat.widget.SearchView)) return;
+        androidx.appcompat.widget.SearchView sv = (androidx.appcompat.widget.SearchView) av;
+        sv.setQuery(query, false);
+        if (!query.isEmpty()) {
+            sv.setIconified(false);
+            item.expandActionView();
+        }
+        sv.setOnQueryTextListener(new androidx.appcompat.widget.SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String s) {
+                query = s == null ? "" : s.trim();
+                reload();
+                return true;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String s) {
+                query = s == null ? "" : s.trim();
+                reload();
+                return true;
+            }
+        });
     }
 
     private void setNavVisible(boolean visible) {
@@ -357,9 +389,14 @@ public class HomeFragment extends Fragment {
 
     private void reload() {
         if (store == null || adapter == null) return;
-        List<Note> notes = store.getNotes();
+        List<Note> notes = query.isEmpty() ? store.getNotes() : store.search(query);
         adapter.setData(notes);
         if (emptyView != null) emptyView.setVisibility(notes.isEmpty() ? View.VISIBLE : View.GONE);
+        if (emptyView != null) {
+            emptyView.setText(query.isEmpty()
+                    ? getString(R.string.empty_hint)
+                    : "没有匹配「" + query + "」的笔记");
+        }
     }
 
     /** 处理「用本软件打开 .mori 文件」 */

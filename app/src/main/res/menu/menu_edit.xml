@@ -6,6 +6,14 @@
         android:title="@string/preview"
         app:showAsAction="always" />
     <item
+        android:id="@+id/action_undo"
+        android:title="撤销"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_redo"
+        android:title="重做"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/action_image"
         android:title="插入图片"
         app:showAsAction="never" />

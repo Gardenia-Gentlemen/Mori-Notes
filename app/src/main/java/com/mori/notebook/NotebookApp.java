@@ -19,6 +19,8 @@ public class NotebookApp extends Application {
         }
         // 内置字体：首次启动/升级后首次启动把 assets/fonts 的字体解到字体库
         BuiltinFonts.ensure(this);
+        // 待办提醒通知渠道（幂等）
+        TodoReceiver.ensureChannel(this);
     }
 
     public static void applyTheme(Context c) {

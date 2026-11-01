@@ -28,6 +28,13 @@ public class NoteEditActivity extends BaseActivity {
     private ActivityResultLauncher<String> imagePicker;
     private String pendingText;
     private Bitmap pendingBitmap;
+    /** 撤销 / 重做：快照 = 正文 + 分隔符 + 标题 */
+    private final UndoStack undoStack = new UndoStack();
+    private static final char SNAP_SEP = '\u0001';
+    /** 程序化 setText 时屏蔽监听，避免污染撤销栈 */
+    private boolean suppress;
+    /** 放弃修改退出：onPause 不再自动保存 */
+    private boolean discarding;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,15 +63,28 @@ public class NoteEditActivity extends BaseActivity {
         et.setText(note.content == null ? "" : note.content);
         etTitle = findViewById(R.id.et_title);
         etTitle.setText(note.title == null ? "" : note.title);
+        attachUndo();
+        getOnBackPressedDispatcher().addCallback(this,
+                new androidx.activity.OnBackPressedCallback(true) {
+                    @Override
+                    public void handleOnBackPressed() {
+                        confirmExit();
+                    }
+                });
 
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         toolbar.inflateMenu(R.menu.menu_edit);
         toggleItem = toolbar.getMenu().findItem(R.id.action_toggle);
-        toolbar.setNavigationOnClickListener(v -> {
-            saveNote();
-            finish();
-        });
+        toolbar.setNavigationOnClickListener(v -> confirmExit());
         toolbar.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == R.id.action_undo) {
+                doUndo();
+                return true;
+            }
+            if (item.getItemId() == R.id.action_redo) {
+                doRedo();
+                return true;
+            }
             if (item.getItemId() == R.id.action_toggle) {
                 setPreviewMode(!previewMode);
                 return true;
@@ -187,6 +207,101 @@ public class NoteEditActivity extends BaseActivity {
         }
     }
 
+    /** 正文与标题的快照（用于撤销 / 重做） */
+    private String snapshot() {
+        return et.getText().toString() + SNAP_SEP + etTitle.getText().toString();
+    }
+
+    private void attachUndo() {
+        android.text.TextWatcher w = new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                if (suppress) return;
+                undoStack.record(snapshot());
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
+            @Override
+            public void afterTextChanged(android.text.Editable s) {
+            }
+        };
+        et.addTextChangedListener(w);
+        etTitle.addTextChangedListener(w);
+    }
+
+    /** 把快照写回两个输入框（不污染撤销栈） */
+    private void applySnapshot(String snap) {
+        if (snap == null) return;
+        int i = snap.indexOf(SNAP_SEP);
+        String c = i < 0 ? snap : snap.substring(0, i);
+        String t = i < 0 ? "" : snap.substring(i + 1);
+        suppress = true;
+        try {
+            et.setTextKeepState(c);
+            et.setSelection(et.getText().length());
+            etTitle.setText(t);
+            etTitle.setSelection(etTitle.getText().length());
+        } catch (Exception ignored) {
+        } finally {
+            suppress = false;
+        }
+    }
+
+    private void doUndo() {
+        String s = undoStack.undo(snapshot());
+        if (s == null) {
+            Toast.makeText(this, "没有可撤销的操作", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        applySnapshot(s);
+    }
+
+    private void doRedo() {
+        String s = undoStack.redo(snapshot());
+        if (s == null) {
+            Toast.makeText(this, "没有可重做的操作", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        applySnapshot(s);
+    }
+
+    /** 当前标题：为空则从正文提炼，仍为空用「无标题」 */
+    private String currentTitle(String content) {
+        String t = etTitle == null ? "" : etTitle.getText().toString().trim();
+        if (t.isEmpty()) t = deriveTitle(content);
+        if (t.isEmpty()) t = "无标题";
+        return t;
+    }
+
+    /** 返回：有改动时提示保存 / 放弃 / 取消 */
+    private void confirmExit() {
+        if (isFinishing()) return;
+        String content = et.getText().toString();
+        String title = currentTitle(content);
+        String oldContent = note.content == null ? "" : note.content;
+        String oldTitle = note.title == null ? "" : note.title;
+        boolean dirty = !content.equals(oldContent) || !title.equals(oldTitle);
+        if (!dirty) {
+            finish();
+            return;
+        }
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("保存修改？")
+                .setPositiveButton("保存", (d, w) -> {
+                    saveNote();
+                    finish();
+                })
+                .setNegativeButton("放弃", (d, w) -> {
+                    discarding = true;
+                    finish();
+                })
+                .setNeutralButton("取消", null)
+                .show();
+    }
+
     private void saveNote() {
         if (note == null) return;
         String content = et.getText().toString();
@@ -237,7 +352,7 @@ public class NoteEditActivity extends BaseActivity {
     }
     @Override
     protected void onPause() {
-        saveNote();
+        if (!discarding) saveNote();
         super.onPause();
     }
 }

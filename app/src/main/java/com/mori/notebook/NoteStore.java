@@ -141,7 +141,24 @@ public class NoteStore {
             }
         } catch (Exception ignored) {
         }
+        Widgets.updateAll(app);
     }
+
+    /** 全文搜索：标题或正文包含关键词（忽略大小写），排除回收站与隐私笔记 */
+    public List<Note> search(String q) {
+        List<Note> out = new ArrayList<>();
+        String key = q == null ? "" : q.trim().toLowerCase();
+        if (key.isEmpty()) return getNotes();
+        for (Note n : notes) {
+            if (n.inTrash() || n.isPrivate) continue;
+            String title = n.title == null ? "" : n.title.toLowerCase();
+            String body = n.content == null ? "" : n.content.toLowerCase();
+            if (title.contains(key) || body.contains(key)) out.add(n);
+        }
+        Collections.sort(out, (a, b) -> Long.compare(b.updatedAt, a.updatedAt));
+        return out;
+    }
+
     public List<Note> getNotes() {
         List<Note> copy = new ArrayList<>();
         for (Note n : notes) {

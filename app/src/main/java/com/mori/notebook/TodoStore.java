@@ -82,7 +82,24 @@ public class TodoStore {
             }
         } catch (Exception ignored) {
         }
+        syncAlarms();
+        Widgets.updateAll(app);
     }
+
+    /** 按当前数据重排全部提醒（已完成 / 无截止 / 已过期则取消） */
+    private void syncAlarms() {
+        try {
+            for (Todo t : todos) {
+                if (t.done || t.dueAt <= 0) {
+                    TodoAlarm.cancel(app, t.id);
+                } else {
+                    TodoAlarm.schedule(app, t);
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+    }
+
     /**
      * 未完成：先按是否逾期/有截止排（有截止的在前，截止近的在前），
      * 再按优先级高→低，再手动权重，最后新建时间倒序。
