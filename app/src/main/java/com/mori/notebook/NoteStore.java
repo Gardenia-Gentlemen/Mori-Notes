@@ -12,7 +12,10 @@ import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 public class NoteStore {
     private static NoteStore instance;
@@ -144,6 +147,45 @@ public class NoteStore {
         Widgets.updateAll(app);
     }
 
+    // ================= 排序 =================
+
+    private static String titleKey(Note n) {
+        String t = n.title == null ? "" : n.title.trim();
+        return t.isEmpty() ? "无标题" : t;
+    }
+
+    /**
+     * 统一排序：置顶优先（组内按置顶时间倒序），其后按偏好排序。
+     * mode 0=更新时间 1=创建时间 2=标题
+     */
+    public static Comparator<Note> buildComparator(final int mode) {
+        return (a, b) -> {
+            boolean pa = a.isPinned();
+            boolean pb = b.isPinned();
+            if (pa != pb) return pa ? -1 : 1;
+            if (pa && pb) {
+                int c = Long.compare(b.pinnedAt, a.pinnedAt);
+                if (c != 0) return c;
+            }
+            switch (mode) {
+                case 1:
+                    return Long.compare(
+                            b.createdAt > 0 ? b.createdAt : b.updatedAt,
+                            a.createdAt > 0 ? a.createdAt : a.updatedAt);
+                case 2:
+                    return titleKey(a).compareToIgnoreCase(titleKey(b));
+                default:
+                    return Long.compare(b.updatedAt, a.updatedAt);
+            }
+        };
+    }
+
+    /** 按当前偏好排序（置顶优先） */
+    public void sortList(List<Note> list) {
+        if (list == null) return;
+        Collections.sort(list, buildComparator(UiPrefs.getSortMode(app)));
+    }
+
     /** 全文搜索：标题或正文包含关键词（忽略大小写），排除回收站与隐私笔记 */
     public List<Note> search(String q) {
         List<Note> out = new ArrayList<>();
@@ -155,7 +197,7 @@ public class NoteStore {
             String body = n.content == null ? "" : n.content.toLowerCase();
             if (title.contains(key) || body.contains(key)) out.add(n);
         }
-        Collections.sort(out, (a, b) -> Long.compare(b.updatedAt, a.updatedAt));
+        sortList(out);
         return out;
     }
 
@@ -164,19 +206,20 @@ public class NoteStore {
         for (Note n : notes) {
             if (!n.inTrash() && !n.isPrivate) copy.add(n);
         }
-        Collections.sort(copy, (a, b) -> Long.compare(b.updatedAt, a.updatedAt));
+        sortList(copy);
         return copy;
     }
 
-    /** 隐私笔记：按更新时间倒序 */
+    /** 隐私笔记：按当前偏好排序 */
     public List<Note> getPrivateNotes() {
         List<Note> copy = new ArrayList<>();
         for (Note n : notes) {
             if (!n.inTrash() && n.isPrivate) copy.add(n);
         }
-        Collections.sort(copy, (a, b) -> Long.compare(b.updatedAt, a.updatedAt));
+        sortList(copy);
         return copy;
     }
+
     /** 设为 / 移出隐私笔记 */
     public void setPrivate(String id, boolean value) {
         Note n = find(id);
@@ -185,6 +228,7 @@ public class NoteStore {
         n.updatedAt = System.currentTimeMillis();
         save();
     }
+
     /** 回收站：按删除时间倒序 */
     public List<Note> getTrash() {
         List<Note> copy = new ArrayList<>();
@@ -193,6 +237,58 @@ public class NoteStore {
         }
         Collections.sort(copy, (a, b) -> Long.compare(b.deletedAt, a.deletedAt));
         return copy;
+    }
+
+    // ================= 置顶 / 收藏 / 标签 =================
+
+    public void setPinned(String id, boolean pinned) {
+        Note n = find(id);
+        if (n == null) return;
+        n.pinnedAt = pinned ? System.currentTimeMillis() : 0L;
+        save();
+    }
+
+    public void setStarred(String id, boolean starred) {
+        Note n = find(id);
+        if (n == null) return;
+        n.starred = starred;
+        save();
+    }
+
+    /** 规范化单个标签：去 #、去空白 */
+    public static String normalizeTag(String raw) {
+        if (raw == null) return "";
+        String v = raw.trim().replace("#", "").trim();
+        return v;
+    }
+
+    public void setTags(String id, List<String> tags) {
+        Note n = find(id);
+        if (n == null) return;
+        n.tags.clear();
+        if (tags != null) {
+            for (String t : tags) {
+                String v = normalizeTag(t);
+                if (!v.isEmpty() && !n.tags.contains(v)) n.tags.add(v);
+            }
+        }
+        save();
+    }
+
+    /** 全部标签（不含回收站），按名称排序 */
+    public List<String> allTags() {
+        Set<String> set = new LinkedHashSet<>();
+        for (Note n : notes) {
+            if (n.inTrash()) continue;
+            if (n.tags == null) continue;
+            for (String t : n.tags) {
+                String v = normalizeTag(t);
+                if (!v.isEmpty()) set.add(v);
+            }
+        }
+        List<String> out = new ArrayList<>(set);
+        Collections.sort(out, String::compareToIgnoreCase);
+        return out;
     }
 
     public static final long TRASH_KEEP_MS = 10L * 24 * 60 * 60 * 1000;
@@ -257,6 +353,10 @@ public class NoteStore {
             existing.type = note.type;
             existing.updatedAt = note.updatedAt;
             existing.isPrivate = note.isPrivate;
+            if (note.createdAt > 0) existing.createdAt = note.createdAt;
+            existing.pinnedAt = note.pinnedAt;
+            existing.starred = note.starred;
+            existing.tags = new ArrayList<>(note.tags == null ? new ArrayList<>() : note.tags);
         } else {
             notes.add(note);
         }
@@ -340,6 +440,10 @@ public class NoteStore {
                 existing.updatedAt = n.updatedAt;
                 existing.isPrivate = n.isPrivate;
                 existing.deletedAt = 0L;
+                if (n.createdAt > 0) existing.createdAt = n.createdAt;
+                existing.pinnedAt = n.pinnedAt;
+                existing.starred = n.starred;
+                existing.tags = new ArrayList<>(n.tags == null ? new ArrayList<>() : n.tags);
             } else {
                 if (!hasId || existing != null) n.id = java.util.UUID.randomUUID().toString();
                 n.deletedAt = 0L;

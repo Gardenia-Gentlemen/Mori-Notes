@@ -83,5 +83,17 @@
                 </ScrollView>
             </FrameLayout>
         </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            android:id="@+id/tv_count"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="end"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            android:paddingBottom="10dp"
+            android:textAppearance="?attr/textAppearanceLabelSmall"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:text="" />
     </LinearLayout>
 </FrameLayout>

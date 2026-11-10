@@ -143,6 +143,26 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.VH> {
             h.preview.setText(previewFor(n, "n"));
         }
         h.meta.setText(fmt.format(n.updatedAt));
+
+        // 置顶角标
+        if (h.pin != null) {
+            h.pin.setVisibility(n.isPinned() ? View.VISIBLE : View.GONE);
+        }
+        // 标签行
+        if (h.tagsWrap != null) {
+            String label = n.tagLabel(grid ? 2 : 3);
+            if (label.isEmpty()) {
+                h.tagsWrap.setVisibility(View.GONE);
+            } else {
+                h.tagsWrap.setVisibility(View.VISIBLE);
+                h.tagsWrap.setText(label);
+            }
+        }
+        // 收藏角标（复用 pin 位右侧）
+        if (h.star != null) {
+            h.star.setVisibility(n.starred ? View.VISIBLE : View.GONE);
+        }
+
         boolean sel = selectionMode && selectedIds.contains(n.id);
         if (h.itemView instanceof com.google.android.material.card.MaterialCardView) {
             com.google.android.material.card.MaterialCardView card =
@@ -222,7 +242,7 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.VH> {
     }
 
     static class VH extends RecyclerView.ViewHolder {
-        TextView title, preview, meta, type;
+        TextView title, preview, meta, type, pin, star, tagsWrap;
 
         VH(@NonNull View itemView) {
             super(itemView);
@@ -230,6 +250,9 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.VH> {
             preview = itemView.findViewById(R.id.tv_preview);
             meta = itemView.findViewById(R.id.tv_meta);
             type = itemView.findViewById(R.id.tv_type);
+            pin = itemView.findViewById(R.id.tv_pin);
+            star = itemView.findViewById(R.id.tv_star);
+            tagsWrap = itemView.findViewById(R.id.tv_tags);
         }
     }
 }

@@ -21,6 +21,7 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /** 主页：笔记列表、多选、下拉进隐私笔记、外部 .mori 打开 */
@@ -41,6 +42,8 @@ public class HomeFragment extends Fragment {
     private boolean toolbarReady;
     /** 搜索关键词（空 = 不搜索） */
     private String query = "";
+
+    private static final String[] SORT_NAMES = {"按更新时间", "按创建时间", "按标题"};
 
     @Nullable
     @Override
@@ -109,19 +112,36 @@ public class HomeFragment extends Fragment {
         tb.getMenu().clear();
         tb.inflateMenu(selecting ? R.menu.menu_select : R.menu.menu_main);
         tb.setOnMenuItemClickListener(item -> {
-            if (item.getItemId() == R.id.action_grid) {
+            int id = item.getItemId();
+            if (id == R.id.action_grid) {
                 toggleGrid();
                 return true;
             }
-            if (item.getItemId() == R.id.action_trash) {
+            if (id == R.id.action_sort) {
+                showSortDialog();
+                return true;
+            }
+            if (id == R.id.action_tag_filter) {
+                showTagFilterDialog();
+                return true;
+            }
+            if (id == R.id.action_fav) {
+                boolean v = !UiPrefs.isFavOnly(requireContext());
+                UiPrefs.setFavOnly(requireContext(), v);
+                reload();
+                applyToolbar();
+                toast(v ? "只看收藏" : "显示全部笔记");
+                return true;
+            }
+            if (id == R.id.action_trash) {
                 startActivity(new Intent(requireContext(), TrashActivity.class));
                 return true;
             }
-            if (item.getItemId() == R.id.action_settings) {
+            if (id == R.id.action_settings) {
                 startActivity(new Intent(requireContext(), SettingsActivity.class));
                 return true;
             }
-            return handleSelectAction(item.getItemId());
+            return handleSelectAction(id);
         });
         if (selecting) {
             tb.getMenu().findItem(R.id.action_sel_normal).setVisible(false);
@@ -129,9 +149,51 @@ public class HomeFragment extends Fragment {
             updateSelectTitle();
         } else {
             tb.setTitle(R.string.app_name);
+            android.view.MenuItem fav = tb.getMenu().findItem(R.id.action_fav);
+            if (fav != null) {
+                fav.setIcon(UiPrefs.isFavOnly(requireContext())
+                        ? R.drawable.ic_star : R.drawable.ic_star_border);
+            }
         }
         setNavVisible(!selecting);
         attachSearch(tb);
+    }
+
+    private void showSortDialog() {
+        int cur = UiPrefs.getSortMode(requireContext());
+        String[] items = new String[SORT_NAMES.length];
+        for (int i = 0; i < SORT_NAMES.length; i++) {
+            items[i] = (i == cur ? "✓ " : "") + SORT_NAMES[i];
+        }
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle("排序方式")
+                .setItems(items, (d, which) -> {
+                    UiPrefs.setSortMode(requireContext(), which);
+                    reload();
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
+    private void showTagFilterDialog() {
+        final List<String> tags = store.allTags();
+        final List<String> items = new ArrayList<>();
+        items.add("全部标签");
+        items.addAll(tags);
+        String cur = UiPrefs.getTagFilter(requireContext());
+        String[] arr = new String[items.size()];
+        for (int i = 0; i < items.size(); i++) {
+            String v = i == 0 ? "" : items.get(i);
+            arr[i] = (v.equals(cur) ? "✓ " : "") + items.get(i);
+        }
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(tags.isEmpty() ? "还没有标签" : "按标签筛选")
+                .setItems(arr, (d, which) -> {
+                    UiPrefs.setTagFilter(requireContext(), which == 0 ? "" : items.get(which));
+                    reload();
+                })
+                .setNegativeButton("取消", null)
+                .show();
     }
 
     /** 顶部搜索框：关键词实时过滤列表 */
@@ -223,48 +285,112 @@ public class HomeFragment extends Fragment {
         startActivity(i);
     }
 
-    private void showItemMenu(Note note) {
+    private void showItemMenu(final Note note) {
+        final String[] items = {
+                note.isPinned() ? "取消置顶" : "置顶",
+                note.starred ? "取消收藏" : "收藏",
+                "标签",
+                "重命名",
+                "设为隐私笔记",
+                "分享图片",
+                "删除",
+                "多选"
+        };
         new MaterialAlertDialogBuilder(requireContext())
                 .setTitle(note.title == null || note.title.trim().isEmpty() ? "无标题" : note.title)
-                .setItems(new String[]{"重命名", "设为隐私笔记", "分享图片", "删除", "多选"}, (d, which) -> {
-                    if (which == 0) {
-                        android.widget.EditText et = new android.widget.EditText(requireContext());
-                        et.setText(note.title);
-                        int pad = (int) (20 * getResources().getDisplayMetrics().density);
-                        et.setPadding(pad, pad, pad, pad);
-                        new MaterialAlertDialogBuilder(requireContext())
-                                .setTitle("重命名")
-                                .setView(et)
-                                .setPositiveButton("确定", (dd, w) -> {
-                                    note.title = et.getText().toString().trim();
-                                    note.updatedAt = System.currentTimeMillis();
-                                    store.put(note);
-                                    reload();
-                                })
-                                .setNegativeButton("取消", null)
-                                .show();
-                    } else if (which == 1) {
-                        store.setPrivate(note.id, true);
-                        reload();
-                        Toast.makeText(requireContext(), "已设为隐私笔记，主页下拉可进入",
-                                Toast.LENGTH_LONG).show();
-                    } else if (which == 2) {
-                        ShareUtils.shareAsImage(requireActivity(), note);
-                    } else if (which == 3) {
-                        new MaterialAlertDialogBuilder(requireContext())
-                                .setMessage("删除这条笔记？将移入回收站，10 天后自动销毁。")
-                                .setPositiveButton("删除", (dd, w) -> {
-                                    store.moveToTrash(note.id);
-                                    reload();
-                                    toast("已移入回收站");
-                                })
-                                .setNegativeButton("取消", null)
-                                .show();
-                    } else {
-                        enterSelection();
-                        adapter.toggleSelection(note);
+                .setItems(items, (d, which) -> {
+                    switch (which) {
+                        case 0:
+                            store.setPinned(note.id, !note.isPinned());
+                            reload();
+                            toast(note.isPinned() ? "已置顶" : "已取消置顶");
+                            break;
+                        case 1:
+                            store.setStarred(note.id, !note.starred);
+                            reload();
+                            toast(note.starred ? "已收藏" : "已取消收藏");
+                            break;
+                        case 2:
+                            editTags(note);
+                            break;
+                        case 3:
+                            rename(note);
+                            break;
+                        case 4:
+                            store.setPrivate(note.id, true);
+                            reload();
+                            Toast.makeText(requireContext(), "已设为隐私笔记，主页下拉可进入",
+                                    Toast.LENGTH_LONG).show();
+                            break;
+                        case 5:
+                            ShareUtils.shareAsImage(requireActivity(), note);
+                            break;
+                        case 6:
+                            new MaterialAlertDialogBuilder(requireContext())
+                                    .setMessage("删除这条笔记？将移入回收站，10 天后自动销毁。")
+                                    .setPositiveButton("删除", (dd, w) -> {
+                                        store.moveToTrash(note.id);
+                                        reload();
+                                        toast("已移入回收站");
+                                    })
+                                    .setNegativeButton("取消", null)
+                                    .show();
+                            break;
+                        default:
+                            enterSelection();
+                            adapter.toggleSelection(note);
+                            break;
                     }
                 })
+                .show();
+    }
+
+    private void rename(final Note note) {
+        android.widget.EditText et = new android.widget.EditText(requireContext());
+        et.setText(note.title);
+        int pad = (int) (20 * getResources().getDisplayMetrics().density);
+        et.setPadding(pad, pad, pad, pad);
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle("重命名")
+                .setView(et)
+                .setPositiveButton("确定", (dd, w) -> {
+                    note.title = et.getText().toString().trim();
+                    note.updatedAt = System.currentTimeMillis();
+                    store.put(note);
+                    reload();
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
+    /** 编辑标签：空格分隔多个 */
+    private void editTags(final Note note) {
+        android.widget.EditText et = new android.widget.EditText(requireContext());
+        StringBuilder sb = new StringBuilder();
+        if (note.tags != null) {
+            for (String t : note.tags) {
+                if (sb.length() > 0) sb.append(' ');
+                sb.append(t);
+            }
+        }
+        et.setText(sb.toString());
+        et.setHint("多个标签用空格分隔");
+        int pad = (int) (20 * getResources().getDisplayMetrics().density);
+        et.setPadding(pad, pad, pad, pad);
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle("标签")
+                .setView(et)
+                .setPositiveButton("确定", (dd, w) -> {
+                    List<String> tags = new ArrayList<>();
+                    String[] parts = et.getText().toString().trim().split("\\s+");
+                    for (String p : parts) {
+                        if (!p.trim().isEmpty()) tags.add(p);
+                    }
+                    store.setTags(note.id, tags);
+                    reload();
+                    toast(tags.isEmpty() ? "已清空标签" : "已保存标签");
+                })
+                .setNegativeButton("取消", null)
                 .show();
     }
 
@@ -390,12 +516,29 @@ public class HomeFragment extends Fragment {
     private void reload() {
         if (store == null || adapter == null) return;
         List<Note> notes = query.isEmpty() ? store.getNotes() : store.search(query);
+        String tag = UiPrefs.getTagFilter(requireContext());
+        boolean favOnly = UiPrefs.isFavOnly(requireContext());
+        if (!tag.isEmpty() || favOnly) {
+            List<Note> filtered = new ArrayList<>();
+            for (Note n : notes) {
+                if (favOnly && !n.starred) continue;
+                if (!tag.isEmpty() && (n.tags == null || !n.tags.contains(tag))) continue;
+                filtered.add(n);
+            }
+            notes = filtered;
+        }
         adapter.setData(notes);
         if (emptyView != null) emptyView.setVisibility(notes.isEmpty() ? View.VISIBLE : View.GONE);
         if (emptyView != null) {
-            emptyView.setText(query.isEmpty()
-                    ? getString(R.string.empty_hint)
-                    : "没有匹配「" + query + "」的笔记");
+            if (!query.isEmpty()) {
+                emptyView.setText("没有匹配「" + query + "」的笔记");
+            } else if (!tag.isEmpty()) {
+                emptyView.setText("没有标签为 #" + tag + " 的笔记");
+            } else if (favOnly) {
+                emptyView.setText("还没有收藏的笔记");
+            } else {
+                emptyView.setText(getString(R.string.empty_hint));
+            }
         }
     }
 

@@ -1,4 +1,5 @@
 package com.mori.notebook;
+
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -6,14 +7,22 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
+
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 public class NoteEditActivity extends BaseActivity {
     private Note note;
@@ -22,6 +31,7 @@ public class NoteEditActivity extends BaseActivity {
     private android.widget.EditText etTitle;
     private android.widget.ScrollView previewScroll;
     private android.widget.TextView previewText;
+    private TextView tvCount;
     private boolean previewMode;
     private MenuItem toggleItem;
     private ActivityResultLauncher<Intent> exportLauncher;
@@ -60,10 +70,13 @@ public class NoteEditActivity extends BaseActivity {
         et = findViewById(R.id.et_content);
         previewScroll = findViewById(R.id.scroll_preview);
         previewText = findViewById(R.id.tv_preview);
+        tvCount = findViewById(R.id.tv_count);
         et.setText(note.content == null ? "" : note.content);
         etTitle = findViewById(R.id.et_title);
         etTitle.setText(note.title == null ? "" : note.title);
         attachUndo();
+        updateCount();
+        restoreDraftIfAny();
         getOnBackPressedDispatcher().addCallback(this,
                 new androidx.activity.OnBackPressedCallback(true) {
                     @Override
@@ -97,6 +110,10 @@ public class NoteEditActivity extends BaseActivity {
                 showExportDialog();
                 return true;
             }
+            if (item.getItemId() == R.id.action_outline) {
+                showOutline();
+                return true;
+            }
             if (item.getItemId() == R.id.action_image) {
                 try {
                     imagePicker.launch("image/*");
@@ -107,6 +124,115 @@ public class NoteEditActivity extends BaseActivity {
             }
             return false;
         });
+    }
+
+    /** 字数 / 行数 / 段落统计 */
+    private void updateCount() {
+        if (tvCount == null || et == null) return;
+        String s = et.getText().toString();
+        int chars = 0;
+        for (int i = 0; i < s.length(); i++) {
+            if (!Character.isWhitespace(s.charAt(i))) chars++;
+        }
+        int lines = s.isEmpty() ? 0 : s.split("\n", -1).length;
+        tvCount.setText(chars + " 字 · " + lines + " 行");
+    }
+
+    /** 启动时若有未保存草稿则询问恢复 */
+    private void restoreDraftIfAny() {
+        if (!UiPrefs.isDraftEnabled(this) || note == null) return;
+        String[] d = DraftStore.get(this, note.id);
+        if (d == null) return;
+        final String dTitle = d[0], dContent = d[1];
+        String curC = et.getText().toString();
+        String curT = etTitle.getText().toString();
+        if (TextUtils.equals(dContent, curC) && TextUtils.equals(dTitle, curT)) {
+            return;
+        }
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("发现未保存的草稿")
+                .setMessage("上次退出时有一段未保存的内容，是否恢复？")
+                .setPositiveButton("恢复", (dialog, w) -> {
+                    suppress = true;
+                    try {
+                        et.setText(dContent);
+                        if (!TextUtils.isEmpty(dTitle)) etTitle.setText(dTitle);
+                    } finally {
+                        suppress = false;
+                    }
+                    updateCount();
+                })
+                .setNegativeButton("丢弃", (dialog, w) -> DraftStore.clear(this, note.id))
+                .show();
+    }
+
+    /** 大纲：解析 Markdown 标题行，点击跳转 */
+    private void showOutline() {
+        if (!UiPrefs.isOutlineEnabled(this)) {
+            Toast.makeText(this, "大纲已在设置中关闭", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        final String content = et.getText().toString();
+        final List<String> titles = new ArrayList<>();
+        final List<Integer> offsets = new ArrayList<>();
+        int pos = 0;
+        for (String line : content.split("\n", -1)) {
+            String t = line.trim();
+            if (t.startsWith("#")) {
+                int level = 0;
+                while (level < t.length() && t.charAt(level) == '#') level++;
+                String name = t.substring(level).trim();
+                if (level >= 1 && level <= 6 && !name.isEmpty()) {
+                    titles.add(indent(level) + name);
+                    offsets.add(pos);
+                }
+            }
+            pos += line.length() + 1;
+        }
+        if (titles.isEmpty()) {
+            Toast.makeText(this, "正文中没有标题（用 # 开头）", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        BottomSheetDialog sheet = new BottomSheetDialog(this);
+        android.widget.LinearLayout box = new android.widget.LinearLayout(this);
+        box.setOrientation(android.widget.LinearLayout.VERTICAL);
+        int pad = (int) (16 * getResources().getDisplayMetrics().density);
+        box.setPadding(pad, pad, pad, pad);
+        TextView head = new TextView(this);
+        head.setText("大纲（" + titles.size() + "）");
+        head.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_TitleMedium);
+        head.setPadding(pad / 2, pad / 2, pad / 2, pad);
+        box.addView(head);
+        for (int i = 0; i < titles.size(); i++) {
+            final int off = offsets.get(i);
+            TextView tv = new TextView(this);
+            tv.setText(titles.get(i));
+            tv.setPadding(pad / 2, pad / 2, pad / 2, pad / 2);
+            tv.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodyLarge);
+            tv.setOnClickListener(v -> {
+                setPreviewMode(false);
+                et.requestFocus();
+                int at = Math.min(off, et.getText().length());
+                et.setSelection(at);
+                int line = et.getLayout() == null ? 0 : et.getLayout().getLineForOffset(at);
+                if (et.getLayout() != null) {
+                    int y = et.getLayout().getLineTop(line) - et.getPaddingTop();
+                    et.scrollTo(0, Math.max(0, y - 8));
+                }
+                sheet.dismiss();
+            });
+            box.addView(tv);
+        }
+        android.widget.ScrollView sc = new android.widget.ScrollView(this);
+        sc.addView(box);
+        sheet.setContentView(sc);
+        sheet.show();
+    }
+
+    private static String indent(int level) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 1; i < level; i++) sb.append("    ");
+        return sb.toString();
     }
 
     /** 分享笔记：图片 / Markdown 文本 / 纯文本 */
@@ -125,6 +251,7 @@ public class NoteEditActivity extends BaseActivity {
                 })
                 .show();
     }
+
     private void showExportDialog() {
         new MaterialAlertDialogBuilder(this)
                 .setTitle("导出笔记")
@@ -196,13 +323,13 @@ public class NoteEditActivity extends BaseActivity {
         previewMode = preview;
         if (preview) {
             previewText.setText(MarkdownRenderer.render(et.getText().toString()));
-            previewScroll.setVisibility(android.view.View.VISIBLE);
-            et.setVisibility(android.view.View.GONE);
+            previewScroll.setVisibility(View.VISIBLE);
+            et.setVisibility(View.GONE);
             previewScroll.scrollTo(0, 0);
             if (toggleItem != null) toggleItem.setTitle(R.string.edit);
         } else {
-            previewScroll.setVisibility(android.view.View.GONE);
-            et.setVisibility(android.view.View.VISIBLE);
+            previewScroll.setVisibility(View.GONE);
+            et.setVisibility(View.VISIBLE);
             if (toggleItem != null) toggleItem.setTitle(R.string.preview);
         }
     }
@@ -226,6 +353,7 @@ public class NoteEditActivity extends BaseActivity {
 
             @Override
             public void afterTextChanged(android.text.Editable s) {
+                updateCount();
             }
         };
         et.addTextChangedListener(w);
@@ -247,6 +375,7 @@ public class NoteEditActivity extends BaseActivity {
         } catch (Exception ignored) {
         } finally {
             suppress = false;
+            updateCount();
         }
     }
 
@@ -285,6 +414,7 @@ public class NoteEditActivity extends BaseActivity {
         String oldTitle = note.title == null ? "" : note.title;
         boolean dirty = !content.equals(oldContent) || !title.equals(oldTitle);
         if (!dirty) {
+            DraftStore.clear(this, note.id);
             finish();
             return;
         }
@@ -296,6 +426,7 @@ public class NoteEditActivity extends BaseActivity {
                 })
                 .setNegativeButton("放弃", (d, w) -> {
                     discarding = true;
+                    DraftStore.clear(this, note.id);
                     finish();
                 })
                 .setNeutralButton("取消", null)
@@ -312,11 +443,15 @@ public class NoteEditActivity extends BaseActivity {
         }
         if (title.isEmpty()) title = "无标题";
         String oldTitle = note.title == null ? "" : note.title;
-        if (content.equals(note.content) && title.equals(oldTitle)) return;
+        if (content.equals(note.content) && title.equals(oldTitle)) {
+            DraftStore.clear(this, note.id);
+            return;
+        }
         note.content = content;
         note.title = title;
         note.updatedAt = System.currentTimeMillis();
         store.put(note);
+        DraftStore.clear(this, note.id);
     }
 
     /** 标题为空时：取正文第一句（到句末标点或换行）作为标题 */
@@ -326,7 +461,8 @@ public class NoteEditActivity extends BaseActivity {
         StringBuilder sb = new StringBuilder();
         for (String line : lines) {
             String t = line.trim();
-            if (t.startsWith(String.valueOf((char)33) + String.valueOf((char)91)) && t.contains(String.valueOf((char)93) + String.valueOf((char)40))) continue;
+            if (t.startsWith(String.valueOf((char) 33) + String.valueOf((char) 91)) && t.contains(String.valueOf((char) 93) + String.valueOf((char) 40)))
+                continue;
             t = t.replaceAll("^#{1,6}\s*", "").replaceAll("[*_`~>]", "").trim();
             if (TextUtils.isEmpty(t)) {
                 if (sb.length() > 0) break;
@@ -342,17 +478,29 @@ public class NoteEditActivity extends BaseActivity {
         if (TextUtils.isEmpty(t)) return "";
         return t.length() > 40 ? t.substring(0, 40) : t;
     }
+
     /** 第一个句末标点之后的长度，没有则 -1 */
     private static int firstSentenceEnd(String s) {
         for (int i = 0; i < s.length(); i++) {
             char c = s.charAt(i);
-            if (c == '。' || c == '！' || c == '？' || c == '；' || c == '!' || c == '?' || c == ';' || c == '.') return i + 1;
+            if (c == '。' || c == '！' || c == '？' || c == '；' || c == '!' || c == '?' || c == ';' || c == '.')
+                return i + 1;
         }
         return -1;
     }
+
     @Override
     protected void onPause() {
-        if (!discarding) saveNote();
+        if (!discarding && note != null) {
+            boolean dirty = !TextUtils.equals(et.getText().toString(), note.content == null ? "" : note.content)
+                    || !TextUtils.equals(etTitle.getText().toString().trim(), note.title == null ? "" : note.title);
+            if (dirty && UiPrefs.isDraftEnabled(this)) {
+                // 自动保存草稿（独立 SP 文件，不影响正式数据）
+                DraftStore.save(this, note.id, etTitle.getText().toString(), et.getText().toString());
+            } else if (!dirty) {
+                DraftStore.clear(this, note.id);
+            }
+        }
         super.onPause();
     }
 }

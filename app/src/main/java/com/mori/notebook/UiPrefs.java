@@ -96,4 +96,52 @@ public class UiPrefs {
     public static void setEditorFontFamily(Context c, String v) {
         sp(c).edit().putString(K_FONT_FAMILY, v).apply();
     }
+
+    // ============ 排序 / 筛选 ============
+
+    private static final String K_SORT = "sort_mode";
+    /** 排序方式：0=更新时间 1=创建时间 2=标题 */
+    public static int getSortMode(Context c) {
+        return sp(c).getInt(K_SORT, 0);
+    }
+    public static void setSortMode(Context c, int v) {
+        sp(c).edit().putInt(K_SORT, v).apply();
+    }
+
+    private static final String K_TAG_FILTER = "tag_filter";
+    /** 标签筛选，空字符串 = 不筛选 */
+    public static String getTagFilter(Context c) {
+        return sp(c).getString(K_TAG_FILTER, "");
+    }
+    public static void setTagFilter(Context c, String v) {
+        sp(c).edit().putString(K_TAG_FILTER, v == null ? "" : v).apply();
+    }
+
+    private static final String K_FAV_ONLY = "fav_only";
+    /** 只看收藏 */
+    public static boolean isFavOnly(Context c) {
+        return sp(c).getBoolean(K_FAV_ONLY, false);
+    }
+    public static void setFavOnly(Context c, boolean v) {
+        sp(c).edit().putBoolean(K_FAV_ONLY, v).apply();
+    }
+
+    // ============ 编辑器 ============
+
+    private static final String K_DRAFT = "draft_enabled";
+    /** 草稿自动保存开关，默认开 */
+    public static boolean isDraftEnabled(Context c) {
+        return sp(c).getBoolean(K_DRAFT, true);
+    }
+    public static void setDraftEnabled(Context c, boolean v) {
+        sp(c).edit().putBoolean(K_DRAFT, v).apply();
+    }
+
+    private static final String K_OUTLINE = "outline_enabled";
+    public static boolean isOutlineEnabled(Context c) {
+        return sp(c).getBoolean(K_OUTLINE, true);
+    }
+    public static void setOutlineEnabled(Context c, boolean v) {
+        sp(c).edit().putBoolean(K_OUTLINE, v).apply();
+    }
 }

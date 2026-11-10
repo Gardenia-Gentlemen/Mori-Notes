@@ -7,6 +7,18 @@
         app:actionViewClass="androidx.appcompat.widget.SearchView"
         app:showAsAction="collapseActionView|always" />
     <item
+        android:id="@+id/action_sort"
+        android:title="排序方式"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_tag_filter"
+        android:title="按标签筛选"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_fav"
+        android:title="只看收藏"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/action_grid"
         android:title="@string/grid_mode"
         app:showAsAction="never" />
