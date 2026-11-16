@@ -293,6 +293,10 @@ public class NoteEditActivity extends BaseActivity {
     private void exportTxt(boolean keepMarkdown) {
         String src = et.getText().toString();
         String text = keepMarkdown ? src : MarkdownRenderer.toPlainText(src);
+        if (keepMarkdown && note != null) {
+            String fm = NoteMeta.frontmatter(note);
+            if (!fm.isEmpty()) text = fm + "\n\n" + text;
+        }
         try {
             String path = ExportUtils.saveText(this, defaultName(), text);
             Toast.makeText(this, "已导出到 " + path, Toast.LENGTH_LONG).show();

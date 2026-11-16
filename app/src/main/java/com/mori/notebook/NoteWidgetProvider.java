@@ -61,8 +61,13 @@ public class NoteWidgetProvider extends AppWidgetProvider {
                 if (n == null) continue;
                 String title = n.title == null || n.title.trim().isEmpty() ? "无标题" : n.title.trim();
                 if (title.length() > 14) title = title.substring(0, 14) + "…";
-                String line = (n.type == 1 ? "◇ " : "· ") + title + "  "
-                        + md.format(new Date(n.updatedAt));
+                StringBuilder sb = new StringBuilder();
+                sb.append(n.type == 1 ? "◇ " : "· ").append(title);
+                if (n.starred) sb.append(" ★");
+                if (n.tags != null && !n.tags.isEmpty()) sb.append(" #").append(n.tags.get(0));
+                if (n.isPinned()) sb.append(" ↑");
+                sb.append("  ").append(md.format(new Date(n.updatedAt)));
+                String line = sb.toString();
                 RemoteViews row = new RemoteViews(c.getPackageName(), R.layout.widget_row);
                 row.setTextViewText(R.id.widget_row_text, line);
                 row.setTextColor(R.id.widget_row_text, fg);

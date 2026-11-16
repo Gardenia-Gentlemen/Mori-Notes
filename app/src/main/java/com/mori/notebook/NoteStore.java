@@ -119,6 +119,14 @@ public class NoteStore {
         } catch (Exception ignored) {
         }
         purgeExpired();
+        pruneDrafts();
+    }
+
+    /** 清理已不存在笔记的草稿（删除笔记后不残留） */
+    private void pruneDrafts() {
+        Set<String> alive = new java.util.HashSet<>();
+        for (Note n : notes) alive.add(n.id);
+        DraftStore.prune(app, alive);
     }
 
     private String serialize() {
@@ -186,19 +194,38 @@ public class NoteStore {
         Collections.sort(list, buildComparator(UiPrefs.getSortMode(app)));
     }
 
-    /** 全文搜索：标题或正文包含关键词（忽略大小写），排除回收站与隐私笔记 */
+    /**
+     * 全文搜索：标题、正文或标签包含关键词（忽略大小写），排除回收站与隐私笔记。
+     * 关键词以 # 开头时只匹配标签。
+     */
     public List<Note> search(String q) {
         List<Note> out = new ArrayList<>();
-        String key = q == null ? "" : q.trim().toLowerCase();
+        String raw = q == null ? "" : q.trim();
+        boolean tagOnly = raw.startsWith("#");
+        String key = (tagOnly ? raw.substring(1) : raw).trim().toLowerCase();
         if (key.isEmpty()) return getNotes();
         for (Note n : notes) {
             if (n.inTrash() || n.isPrivate) continue;
+            if (matchesTag(n, key)) {
+                out.add(n);
+                continue;
+            }
+            if (tagOnly) continue;
             String title = n.title == null ? "" : n.title.toLowerCase();
             String body = n.content == null ? "" : n.content.toLowerCase();
             if (title.contains(key) || body.contains(key)) out.add(n);
         }
         sortList(out);
         return out;
+    }
+
+    /** 标签是否包含关键词（子串匹配，忽略大小写） */
+    private static boolean matchesTag(Note n, String key) {
+        if (n.tags == null) return false;
+        for (String t : n.tags) {
+            if (t != null && t.toLowerCase().contains(key)) return true;
+        }
+        return false;
     }
 
     public List<Note> getNotes() {
@@ -291,6 +318,55 @@ public class NoteStore {
         return out;
     }
 
+    /** 标签 -> 条数（不含回收站） */
+    public java.util.Map<String, Integer> tagCounts() {
+        java.util.Map<String, Integer> map = new java.util.LinkedHashMap<>();
+        for (String t : allTags()) map.put(t, 0);
+        for (Note n : notes) {
+            if (n.inTrash() || n.tags == null) continue;
+            for (String t : n.tags) {
+                String v = normalizeTag(t);
+                if (v.isEmpty() || !map.containsKey(v)) continue;
+                map.put(v, map.get(v) + 1);
+            }
+        }
+        return map;
+    }
+
+    /** 重命名标签：全库替换（同名已存在时自动去重），返回受影响条数 */
+    public int renameTag(String from, String to) {
+        String a = normalizeTag(from);
+        String b = normalizeTag(to);
+        if (a.isEmpty() || b.isEmpty() || a.equals(b)) return 0;
+        int changed = 0;
+        for (Note n : notes) {
+            if (n.tags == null || !n.tags.contains(a)) continue;
+            List<String> out = new ArrayList<>();
+            for (String t : n.tags) {
+                String v = a.equals(t) ? b : t;
+                if (!out.contains(v)) out.add(v);
+            }
+            n.tags.clear();
+            n.tags.addAll(out);
+            changed++;
+        }
+        if (changed > 0) save();
+        return changed;
+    }
+
+    /** 删除标签：从所有笔记中移除，返回受影响条数 */
+    public int removeTag(String name) {
+        String a = normalizeTag(name);
+        if (a.isEmpty()) return 0;
+        int changed = 0;
+        for (Note n : notes) {
+            if (n.tags == null || !n.tags.remove(a)) continue;
+            changed++;
+        }
+        if (changed > 0) save();
+        return changed;
+    }
+
     public static final long TRASH_KEEP_MS = 10L * 24 * 60 * 60 * 1000;
 
     /** 放入回收站 */
@@ -298,6 +374,7 @@ public class NoteStore {
         Note n = find(id);
         if (n == null) return;
         n.deletedAt = System.currentTimeMillis();
+        DraftStore.clear(app, id);
         save();
     }
 
@@ -319,21 +396,36 @@ public class NoteStore {
     /** 清空超过 10 天的回收站内容 */
     public void purgeExpired() {
         long now = System.currentTimeMillis();
+        List<String> gone = new ArrayList<>();
+        for (Note n : notes) {
+            if (n.inTrash() && now - n.deletedAt >= TRASH_KEEP_MS) gone.add(n.id);
+        }
         boolean changed = notes.removeIf(n -> n.inTrash() && now - n.deletedAt >= TRASH_KEEP_MS);
-        if (changed) save();
+        if (changed) {
+            for (String id : gone) DraftStore.clear(app, id);
+            save();
+        }
     }
 
     /** 清空回收站，返回彻底删除的条数 */
     public int clearTrash() {
+        List<String> gone = new ArrayList<>();
+        for (Note n : notes) {
+            if (n.inTrash()) gone.add(n.id);
+        }
         int before = notes.size();
         notes.removeIf(n -> n.inTrash());
         int removed = before - notes.size();
-        if (removed > 0) save();
+        if (removed > 0) {
+            for (String id : gone) DraftStore.clear(app, id);
+            save();
+        }
         return removed;
     }
 
     public void deleteForever(String id) {
         notes.removeIf(n -> n.id.equals(id));
+        DraftStore.clear(app, id);
         save();
     }
 
@@ -412,7 +504,10 @@ public class NoteStore {
             n.deletedAt = now;
             changed++;
         }
-        if (changed > 0) save();
+        if (changed > 0) {
+            for (String id : ids) DraftStore.clear(app, id);
+            save();
+        }
         return changed;
     }
 

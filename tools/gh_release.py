@@ -63,12 +63,32 @@ if not os.path.exists(src):
     if r.returncode != 0:
         sys.exit('SRC_ZIP_FAIL ' + r.stderr[:300])
 
-note_file = arg('--note')
-if note_file and os.path.exists(note_file):
-    body = open(note_file, encoding='utf-8').read()
-else:
+def changelog_section(version):
+    """从 CHANGELOG.md 取 `## <version> (code)` 章节正文。"""
+    path = os.path.join(ROOT, 'CHANGELOG.md')
+    if not os.path.exists(path):
+        return None
+    txt = open(path, encoding='utf-8').read()
+    m = re.search(r'^## %s \(\d+\)\s*$(.*?)(?=^## |\Z)' % re.escape(version), txt, re.S | re.M)
+    return m.group(1).strip() if m else None
+
+
+def release_body(version):
+    """正文优先级: --note 文件 > release.py 落盘的 /tmp 正文 > CHANGELOG 章节 > tag 说明。"""
+    note_file = arg('--note')
+    if note_file and os.path.exists(note_file):
+        return open(note_file, encoding='utf-8').read()
+    tmp = '/tmp/mori_notes-v%s-release.md' % version
+    if os.path.exists(tmp):
+        return open(tmp, encoding='utf-8').read()
+    sec = changelog_section(version)
+    if sec:
+        return sec
     r = subprocess.run(['git', 'tag', '-l', '-n99', tag], cwd=ROOT, capture_output=True, text=True)
-    body = r.stdout.strip() or tag
+    return r.stdout.strip() or tag
+
+
+body = release_body(ver)
 
 st, txt = api('https://api.github.com/repos/%s/releases/tags/%s' % (REPO, tag))
 if st == 200:

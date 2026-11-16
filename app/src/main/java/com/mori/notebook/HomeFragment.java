@@ -167,6 +167,7 @@ public class HomeFragment extends Fragment {
         }
         new MaterialAlertDialogBuilder(requireContext())
                 .setTitle("排序方式")
+                .setMessage("置顶笔记始终排在最前，组内按置顶时间倒序。")
                 .setItems(items, (d, which) -> {
                     UiPrefs.setSortMode(requireContext(), which);
                     reload();
@@ -180,17 +181,97 @@ public class HomeFragment extends Fragment {
         final List<String> items = new ArrayList<>();
         items.add("全部标签");
         items.addAll(tags);
+        items.add("管理标签…");
+        final int manageIndex = items.size() - 1;
         String cur = UiPrefs.getTagFilter(requireContext());
         String[] arr = new String[items.size()];
         for (int i = 0; i < items.size(); i++) {
-            String v = i == 0 ? "" : items.get(i);
+            String v = (i == 0 || i == manageIndex) ? "" : items.get(i);
             arr[i] = (v.equals(cur) ? "✓ " : "") + items.get(i);
         }
         new MaterialAlertDialogBuilder(requireContext())
                 .setTitle(tags.isEmpty() ? "还没有标签" : "按标签筛选")
                 .setItems(arr, (d, which) -> {
+                    if (which == manageIndex) {
+                        manageTags();
+                        return;
+                    }
                     UiPrefs.setTagFilter(requireContext(), which == 0 ? "" : items.get(which));
                     reload();
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
+    /** 标签管理：列出全部标签与条数 */
+    private void manageTags() {
+        final List<String> tags = store.allTags();
+        if (tags.isEmpty()) {
+            toast("还没有标签");
+            return;
+        }
+        java.util.Map<String, Integer> counts = store.tagCounts();
+        String[] arr = new String[tags.size()];
+        for (int i = 0; i < tags.size(); i++) {
+            String t = tags.get(i);
+            Integer c = counts.get(t);
+            arr[i] = "#" + t + "  (" + (c == null ? 0 : c) + ")";
+        }
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle("管理标签")
+                .setItems(arr, (d, which) -> showTagActions(tags.get(which)))
+                .setNegativeButton("关闭", null)
+                .show();
+    }
+
+    private void showTagActions(final String tag) {
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle("#" + tag)
+                .setItems(new String[]{"重命名", "删除该标签"}, (d, which) -> {
+                    if (which == 0) askRenameTag(tag);
+                    else confirmRemoveTag(tag);
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
+    private void askRenameTag(final String tag) {
+        final android.widget.EditText et = new android.widget.EditText(requireContext());
+        et.setText(tag);
+        et.setSingleLine(true);
+        int pad = (int) (20 * getResources().getDisplayMetrics().density);
+        et.setPadding(pad, pad, pad, pad);
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle("重命名标签")
+                .setView(et)
+                .setPositiveButton("确定", (d, w) -> {
+                    String to = NoteStore.normalizeTag(et.getText().toString());
+                    if (to.isEmpty()) {
+                        toast("标签不能为空");
+                        return;
+                    }
+                    if (to.equals(tag)) return;
+                    int n = store.renameTag(tag, to);
+                    if (tag.equals(UiPrefs.getTagFilter(requireContext()))) {
+                        UiPrefs.setTagFilter(requireContext(), to);
+                    }
+                    reload();
+                    toast("已重命名，影响 " + n + " 条");
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
+    private void confirmRemoveTag(final String tag) {
+        new MaterialAlertDialogBuilder(requireContext())
+                .setMessage("从所有笔记中删除标签 #" + tag + "？笔记本身不会被删除。")
+                .setPositiveButton("删除", (d, w) -> {
+                    int n = store.removeTag(tag);
+                    if (tag.equals(UiPrefs.getTagFilter(requireContext()))) {
+                        UiPrefs.setTagFilter(requireContext(), "");
+                    }
+                    reload();
+                    toast("已从 " + n + " 条笔记移除");
                 })
                 .setNegativeButton("取消", null)
                 .show();

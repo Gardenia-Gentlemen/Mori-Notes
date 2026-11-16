@@ -3,6 +3,7 @@ package com.mori.notebook;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.InputType;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -19,6 +20,7 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -38,6 +40,7 @@ public class PrivateNotesActivity extends BaseActivity {
 
     private boolean unlocked;
     private boolean authenticating;
+    private boolean starredOnly;
     private ActivityResultLauncher<Intent> deviceLauncher;
 
     @Override
@@ -50,7 +53,16 @@ public class PrivateNotesActivity extends BaseActivity {
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
         toolbar.inflateMenu(R.menu.menu_select);
-        toolbar.setOnMenuItemClickListener(item -> handleSelectAction(item.getItemId()));
+        toolbar.getMenu().add(0, 9001, 0, "只看收藏");
+        toolbar.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == 9001) {
+                starredOnly = !starredOnly;
+                item.setTitle(starredOnly ? "查看全部" : "只看收藏");
+                reload();
+                return true;
+            }
+            return handleSelectAction(item.getItemId());
+        });
 
         recycler = findViewById(R.id.recycler);
         emptyView = findViewById(R.id.tv_empty);
@@ -136,7 +148,20 @@ public class PrivateNotesActivity extends BaseActivity {
     }
 
     private void reload() {
-        List<Note> notes = store.getPrivateNotes();
+        List<Note> all = store.getPrivateNotes();
+        List<Note> notes = new ArrayList<>();
+        if (all != null) {
+            for (Note n : all) {
+                if (n == null) continue;
+                if (starredOnly && !n.starred) continue;
+                notes.add(n);
+            }
+        }
+        notes.sort((a, b) -> {
+            if (a.isPinned() != b.isPinned()) return a.isPinned() ? -1 : 1;
+            if (a.isPinned() && a.pinnedAt != b.pinnedAt) return a.pinnedAt > b.pinnedAt ? -1 : 1;
+            return a.updatedAt > b.updatedAt ? -1 : (a.updatedAt == b.updatedAt ? 0 : 1);
+        });
         adapter.setData(notes);
         emptyView.setVisibility(notes.isEmpty() ? View.VISIBLE : View.GONE);
     }

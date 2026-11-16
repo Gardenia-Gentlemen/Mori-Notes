@@ -14,6 +14,7 @@
     * Release 正文 = CHANGELOG.md 中 ## <new> (code) 章节
 """
 import argparse
+import io
 import json
 import os
 import re
@@ -26,7 +27,7 @@ import urllib.error
 import zipfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OWNER_REPO = "Gardenia-Gentlemen/notebook"
+OWNER_REPO = "Gardenia-Gentlemen/Mori-Notes"  # 与 gh_release.py 保持一致
 API = "https://api.github.com"
 EXCLUDE_DIRS = {"build", ".git", ".gradle", ".idea"}
 EXCLUDE_FILES = {"local.properties", "keystore.properties", ".DS_Store"}
@@ -43,9 +44,14 @@ def sh(cmd, check=True, cwd=ROOT):
 
 def token():
     t = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
-    if not t:
-        sys.exit("缺少 GH_TOKEN 环境变量（classic PAT，需 repo 权限）")
-    return t
+    if t:
+        return t.strip()
+    p = os.path.expanduser("~/.gh_token")
+    if os.path.exists(p):
+        d = io.open(p, encoding="utf-8").read().strip()
+        if d:
+            return d
+    sys.exit("缺少 token：GH_TOKEN 环境变量或 ~/.gh_token")
 
 
 def api(method, path, tok, data=None, raw=None, ctype=None):
@@ -111,16 +117,13 @@ def snapshot_src(version):
 
 
 def zip_src(version):
+    """复用 tools/pack_src.py（本机无 zip 命令，统一 python zipfile）。"""
     src = os.path.join(ROOT, "releases", "v" + version, "src")
     if not os.path.isdir(src):
         sys.exit("缺少 releases/v%s/src，无法打包" % version)
     out = "/tmp/mori_notes-v%s-src.zip" % version
-    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
-        for dp, _, fs in os.walk(src):
-            for f in fs:
-                p = os.path.join(dp, f)
-                z.write(p, os.path.join("src", os.path.relpath(p, src)))
-    print("源码包: %s  %d 字节" % (out, os.path.getsize(out)))
+    sh("%s tools/pack_src.py --dir '%s' --out '%s'"
+       % (sys.executable, src, out))
     return out
 
 
@@ -232,7 +235,9 @@ def main():
     prev = existing[-1] if existing else None
     print("新版本 v%s，上一版本 v%s" % (v, prev or "无"))
     body = changelog_body(v)
-    print("更新日志: %d 字" % len(body))
+    note_tmp = "/tmp/mori_notes-v%s-release.md" % v
+    io.open(note_tmp, "w", encoding="utf-8").write(body + "\n")
+    print("更新日志: %d 字 -> %s" % (len(body), note_tmp))
 
     _, _, feat = update_readme_features(v, write=False)
     if a.dry_run and feat:

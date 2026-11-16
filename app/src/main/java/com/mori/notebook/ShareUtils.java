@@ -75,8 +75,12 @@ public final class ShareUtils {
 
     /** 组装分享文本：标题 + 正文；思维导图笔记转缩进大纲 */
     private static String textOf(Note note, boolean markdown) {
-        String title = note.title == null ? "" : note.title.trim();
         StringBuilder sb = new StringBuilder();
+        if (markdown) {
+            String fm = NoteMeta.frontmatter(note);
+            if (!fm.isEmpty()) sb.append(fm).append("\n\n");
+        }
+        String title = note.title == null ? "" : note.title.trim();
         if (!title.isEmpty()) {
             sb.append(markdown ? "# " + title : title).append("\n\n");
         }
@@ -89,6 +93,10 @@ public final class ShareUtils {
             body = MarkdownRenderer.toPlainText(note.content);
         }
         sb.append(body == null ? "" : body.trim());
+        if (!markdown) {
+            String meta = NoteMeta.metaLine(note);
+            if (!meta.isEmpty()) sb.append("\n\n").append(meta);
+        }
         return sb.toString().trim();
     }
 
