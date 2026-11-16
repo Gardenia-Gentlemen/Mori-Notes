@@ -167,12 +167,17 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.VH> {
         if (h.itemView instanceof com.google.android.material.card.MaterialCardView) {
             com.google.android.material.card.MaterialCardView card =
                     (com.google.android.material.card.MaterialCardView) h.itemView;
-            int stroke = (int) (2 * h.itemView.getResources().getDisplayMetrics().density);
-            card.setStrokeWidth(sel ? stroke : 0);
-            if (sel) {
-                card.setStrokeColor(com.google.android.material.color.MaterialColors.getColor(
-                        h.itemView, com.google.android.material.R.attr.colorPrimary));
+            float d = h.itemView.getResources().getDisplayMetrics().density;
+            int thin = (int) (1 * d), thick = (int) (2 * d);
+            boolean pinned = n.isPinned();
+            card.setStrokeWidth(sel ? thick : thin);
+            int strokeColor = com.google.android.material.color.MaterialColors.getColor(
+                    h.itemView, com.google.android.material.R.attr.colorOutlineVariant);
+            if (sel || pinned) {
+                strokeColor = com.google.android.material.color.MaterialColors.getColor(
+                        h.itemView, com.google.android.material.R.attr.colorPrimary);
             }
+            card.setStrokeColor(strokeColor);
         }
         h.itemView.setOnClickListener(v -> {
             if (selectionMode) {

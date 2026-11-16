@@ -31,6 +31,8 @@ public class HomeFragment extends Fragment {
     private NoteAdapter adapter;
     private RecyclerView recycler;
     private TextView emptyView;
+    private TextView emptySub;
+    private View emptyBox;
     /** 多选模式 */
     private boolean selecting;
     /** 下拉进入隐私笔记 */
@@ -57,6 +59,8 @@ public class HomeFragment extends Fragment {
         store = NoteStore.get(requireContext());
         recycler = view.findViewById(R.id.recycler);
         emptyView = view.findViewById(R.id.tv_empty);
+        emptySub = view.findViewById(R.id.tv_empty_sub);
+        emptyBox = view.findViewById(R.id.empty_view);
         adapter = new NoteAdapter(new NoteAdapter.Listener() {
             @Override
             public void onClick(Note note) {
@@ -96,6 +100,13 @@ public class HomeFragment extends Fragment {
                     open(n);
                 })
                 .show());
+        recycler.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrolled(@NonNull RecyclerView rv, int dx, int dy) {
+                if (dy > 8) fab.hide();
+                else if (dy < -8) fab.show();
+            }
+        });
         toolbarReady = true;
         applyToolbar();
     }
@@ -609,7 +620,7 @@ public class HomeFragment extends Fragment {
             notes = filtered;
         }
         adapter.setData(notes);
-        if (emptyView != null) emptyView.setVisibility(notes.isEmpty() ? View.VISIBLE : View.GONE);
+        if (emptyBox != null) emptyBox.setVisibility(notes.isEmpty() ? View.VISIBLE : View.GONE);
         if (emptyView != null) {
             if (!query.isEmpty()) {
                 emptyView.setText("没有匹配「" + query + "」的笔记");
@@ -619,6 +630,10 @@ public class HomeFragment extends Fragment {
                 emptyView.setText("还没有收藏的笔记");
             } else {
                 emptyView.setText(getString(R.string.empty_hint));
+            }
+            if (emptySub != null) {
+                boolean clean = query.isEmpty() && tag.isEmpty() && !favOnly;
+                emptySub.setVisibility(clean ? View.VISIBLE : View.GONE);
             }
         }
     }

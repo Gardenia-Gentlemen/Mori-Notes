@@ -27,8 +27,8 @@
             app:backgroundTint="@android:color/transparent"
             app:elevation="0dp"
             app:itemActiveIndicatorStyle="@style/Widget.Notebook.NavIndicator"
-            app:itemIconTint="?attr/colorPrimary"
-            app:itemTextColor="?attr/colorPrimary"
+            app:itemIconTint="@color/nav_item_color"
+            app:itemTextColor="@color/nav_item_color"
             app:menu="@menu/menu_bottom" />
     </LinearLayout>
 </FrameLayout>
