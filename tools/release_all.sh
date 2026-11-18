@@ -71,7 +71,7 @@ if [ $? -ne 0 ]; then echo "release.py 失败，停止"; exit 1; fi
 
 step "4/6 本地归档"
 mkdir -p "$ARCHIVE_DIR"
-cp -f "$APK" "$ARCHIVE_DIR/mori_notes-v$VER.apk"
+cp -f "$APK" "$ARCHIVE_DIR/Mori-Notes-v$VER.apk"
 FAST_ZIP=$(ls -1t /tmp/mori_notes-v*-src.zip 2>/dev/null | head -1)
 if [ -n "$FAST_ZIP" ]; then cp -f "$FAST_ZIP" "$ARCHIVE_DIR/mori_notes-v$VER-src.zip"; fi
 rm -rf "$ARCHIVE_DIR/src"
