@@ -157,6 +157,7 @@ public class TrashActivity extends BaseActivity {
             h.meta.setText("删除于 " + fmt.format(new Date(n.deletedAt)) + " · 剩余 " + days + " 天");
             h.itemView.setOnClickListener(v -> showMenu(n));
             h.itemView.setOnLongClickListener(v -> {
+                v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
                 showMenu(n);
                 return true;
             });

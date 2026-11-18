@@ -446,6 +446,7 @@ public class CountdownTimelineActivity extends BaseActivity {
             final TimelineNote ref = node.ref;
             row.setLongClickable(true);
             row.setOnLongClickListener(v -> {
+                v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
                 showNoteMenu(ref);
                 return true;
             });

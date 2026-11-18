@@ -252,6 +252,7 @@ public class CountdownAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
             }
         });
         h.card.setOnLongClickListener(v -> {
+            v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
             if (h.current != null) {
                 listener.onLongClick(h.current);
             }
@@ -263,6 +264,7 @@ public class CountdownAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
             }
         });
         h.menu.setOnLongClickListener(v -> {
+            v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
             if (selectionMode) {
                 return true;
             }

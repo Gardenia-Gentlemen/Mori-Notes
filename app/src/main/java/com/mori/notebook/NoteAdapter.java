@@ -187,6 +187,7 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.VH> {
             }
         });
         h.itemView.setOnLongClickListener(v -> {
+            v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
             if (selectionMode) {
                 if (!selectedIds.contains(n.id)) toggleSelection(n);
                 listener.onSelectionLongClick();

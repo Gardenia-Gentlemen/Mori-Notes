@@ -77,6 +77,7 @@ public class MindAdapter extends RecyclerView.Adapter<MindAdapter.VH> {
         });
         h.itemView.setOnClickListener(v -> listener.onClick(node));
         h.itemView.setOnLongClickListener(v -> {
+            v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
             listener.onLongClick(node);
             return true;
         });

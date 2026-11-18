@@ -135,6 +135,7 @@ public class FontAdapter extends RecyclerView.Adapter<FontAdapter.Holder> {
         h.itemView.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
+                v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
                 if (selectMode) {
                     toggle(f);
                 } else {
